@@ -252,7 +252,7 @@ import Foundation
           newContent: newContent,
           geometry: node.fiber?.geometry
             ?? .init(
-              origin: .init(origin: .zero),
+              origin: .init(parent: .zero, origin: .zero),
               dimensions: .init(size: .zero, alignmentGuides: [:]),
               proposal: .unspecified
             )

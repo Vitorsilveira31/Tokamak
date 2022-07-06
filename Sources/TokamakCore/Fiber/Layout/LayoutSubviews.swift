@@ -22,15 +22,20 @@ import Foundation
   public var layoutDirection: LayoutDirection
   var storage: [LayoutSubview]
 
-  init(layoutDirection: LayoutDirection, storage: [LayoutSubview]) {
+  @_spi(TokamakCore)
+  public var globalOrigin: CGPoint
+
+  init(layoutDirection: LayoutDirection, storage: [LayoutSubview], globalOrigin: CGPoint) {
     self.layoutDirection = layoutDirection
     self.storage = storage
+    self.globalOrigin = globalOrigin
   }
 
   init<R: FiberRenderer>(_ node: FiberReconciler<R>.Fiber) {
     self.init(
       layoutDirection: node.outputs.environment.environment.layoutDirection,
-      storage: []
+      storage: [],
+      globalOrigin: node.geometry?.origin.globalOrigin ?? .zero
     )
   }
 
@@ -53,7 +58,11 @@ import Foundation
   }
 
   public subscript(bounds: Range<Int>) -> LayoutSubviews {
-    .init(layoutDirection: layoutDirection, storage: .init(storage[bounds]))
+    .init(
+      layoutDirection: layoutDirection,
+      storage: .init(storage[bounds]),
+      globalOrigin: globalOrigin
+    )
   }
 
   public subscript<S>(indices: S) -> LayoutSubviews where S: Sequence, S.Element == Int {
@@ -61,7 +70,8 @@ import Foundation
       layoutDirection: layoutDirection,
       storage: storage.enumerated()
         .filter { indices.contains($0.offset) }
-        .map(\.element)
+        .map(\.element),
+      globalOrigin: globalOrigin
     )
   }
 }
@@ -167,10 +177,12 @@ import Foundation
       let geometry = ViewGeometry(
         // Shift to the anchor point in the parent's coordinate space.
         origin: .init(
+          parent: fiber.elementParent?.geometry?.origin.globalOrigin ?? .zero,
           origin: .init(
             x: position.x - (dimensions.width * anchor.x),
             y: position.y - (dimensions.height * anchor.y)
-          )),
+          )
+        ),
         dimensions: dimensions,
         proposal: proposal
       )
@@ -178,6 +190,10 @@ import Foundation
       if geometry != fiber.alternate?.geometry {
         caches.mutations.append(.layout(element: element, geometry: geometry))
       }
+      caches.layoutSubviews[
+        ObjectIdentifier(fiber),
+        default: .init(fiber)
+      ].globalOrigin = geometry.origin.globalOrigin
       // Update ours and our alternate's geometry
       fiber.geometry = geometry
       fiber.alternate?.geometry = geometry
