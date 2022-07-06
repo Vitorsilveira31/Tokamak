@@ -83,10 +83,11 @@ public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
   public func _visitChildren<V>(_ visitor: V) where V: SceneVisitor {
     print("Olha o visitChildren do WindowGroup", content, content.body)
     print("Visiting scene")
-    visitor.visit(Group {
-      _WindowGroupTitle(title: self.title)
-      content
-    })
+    visitor.visit(
+      Group {
+        _WindowGroupTitle(title: self.title)
+        content
+      })
   }
 }
 
