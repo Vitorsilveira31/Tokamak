@@ -59,7 +59,7 @@ struct HTMLBody: AnyHTML {
   ]
 }
 
-extension HTMLMeta.MetaTag {
+public extension HTMLMeta.MetaTag {
   func outerHTML() -> String {
     switch self {
     case .charset(let charset):

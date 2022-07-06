@@ -14,7 +14,12 @@
 //
 //  Created by Carson Katri on 7/16/20.
 //
-@MainActor
+
+@_spi(TokamakCore)
+public struct _WindowGroupTitle: _PrimitiveView {
+  public let title: Text?
+}
+
 public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
   public let id: String
   public let title: Text?
@@ -77,7 +82,11 @@ public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
 
   public func _visitChildren<V>(_ visitor: V) where V: SceneVisitor {
     print("Olha o visitChildren do WindowGroup", content, content.body)
-    visitor.visit(content)
+    print("Visiting scene")
+    visitor.visit(Group {
+      _WindowGroupTitle(title: self.title)
+      content
+    })
   }
 }
 

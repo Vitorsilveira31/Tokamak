@@ -71,6 +71,10 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
           .environmentValues(environment)
       }
     }
+
+    static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
+      .init(inputs: inputs, preferenceStore: inputs.preferenceStore ?? .init())
+    }
   }
 
   /// The `Layout` container for the root of a `View` hierarchy.
@@ -292,6 +296,10 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
 
     for action in afterReconcileActions {
       action()
+    }
+
+    if let preferences = current.preferences {
+      renderer.preferencesChanged(preferences)
     }
   }
 }

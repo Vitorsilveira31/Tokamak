@@ -428,7 +428,8 @@ extension FiberReconciler {
           environment: .init(rootEnvironment),
           traits: .init(),
           preferenceStore: preferences
-        )
+        ),
+        preferenceStore: preferences ?? .init()
       )
       if let preferenceStore = outputs.preferenceStore {
         preferences = preferenceStore
