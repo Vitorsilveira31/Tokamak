@@ -37,9 +37,13 @@ extension _BackgroundStyleModifier: @MainActor DOMViewModifier {
     return [
       "style":
         """
-      background-color: rgba(\(color.red * 255), \(color.green * 255), \(color
-          .blue * 255), \(blur
-          .opacity));
+      background-color: rgba(\(color.red * 255), \(color.green * 255), \(
+          color
+            .blue * 255
+        ), \(
+          blur
+            .opacity
+        ));
       -webkit-backdrop-filter: blur(\(blur.radius)px);
       backdrop-filter: blur(\(blur.radius)px);
       """

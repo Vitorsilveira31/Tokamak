@@ -22,9 +22,9 @@ func title<V>(_ view: V, title: String) -> AnyView where V: View {
     return AnyView(view.navigationTitle(title))
   } else {
     #if !os(macOS)
-    return AnyView(view.navigationBarTitle(title))
+      return AnyView(view.navigationBarTitle(title))
     #else
-    return AnyView(view)
+      return AnyView(view)
     #endif
   }
 }
@@ -49,15 +49,15 @@ struct NavItem: View {
       NavigationLink(id, destination: dest)
     } else {
       #if os(WASI)
-      Text(id)
-      #elseif os(macOS)
-      Text(id).opacity(0.5)
-      #elseif os(Linux)
-      HStack {
         Text(id)
-        Spacer()
-        Text("unavailable")
-      }
+      #elseif os(macOS)
+        Text(id).opacity(0.5)
+      #elseif os(Linux)
+        HStack {
+          Text(id)
+          Spacer()
+          Text("unavailable")
+        }
       #endif
     }
   }
@@ -74,7 +74,7 @@ struct TokamakDemoView: View {
           NavItem(
             "Counter",
             destination:
-            Counter(count: Count(value: 5), limit: 15)
+              Counter(count: Count(value: 5), limit: 15)
               .padding()
               .background(Color(red: 0.9, green: 0.9, blue: 0.9, opacity: 1.0))
               .border(Color.red, width: 3)
@@ -86,9 +86,9 @@ struct TokamakDemoView: View {
           NavItem("ForEach", destination: ForEachDemo())
           if #available(iOS 14.0, *) {
             #if os(macOS)
-            NavItem("List", destination: ListDemo())
+              NavItem("List", destination: ListDemo())
             #else
-            NavItem("List", destination: ListDemo().listStyle(InsetGroupedListStyle()))
+              NavItem("List", destination: ListDemo().listStyle(InsetGroupedListStyle()))
             #endif
           } else {
             NavItem("List", destination: ListDemo())
@@ -109,7 +109,7 @@ struct TokamakDemoView: View {
             NavItem("Canvas", destination: CanvasDemo())
           }
           NavItem("Color", destination: ColorDemo())
-//            NavItem("Path", destination: PathDemo())
+          //            NavItem("Path", destination: PathDemo())
           if #available(macOS 12.0, iOS 15.0, *) {
             NavItem("Shape Styles", destination: ShapeStyleDemo())
           }
@@ -122,18 +122,21 @@ struct TokamakDemoView: View {
             NavItem(unavailable: "Grid")
           }
           NavItem("Spacer", destination: SpacerDemo())
-          NavItem("ZStack", destination: ZStack {
-            Text("I'm on bottom")
-            Text("I'm forced to the top")
-              .zIndex(1)
-            Text("I'm on top")
-          }.padding(20))
+          NavItem(
+            "ZStack",
+            destination: ZStack {
+              Text("I'm on bottom")
+              Text("I'm forced to the top")
+                .zIndex(1)
+              Text("I'm on top")
+            }.padding(20))
           NavItem("GeometryReader", destination: GeometryReaderDemo())
         }
         Section(header: Text("Modifiers")) {
           NavItem("Shadow", destination: ShadowDemo())
           #if os(WASI) && compiler(>=5.5) && (canImport(Concurrency) || canImport(_Concurrency))
-          NavItem("Task", destination: TaskDemo())
+            NavItem("Receive Change", destination: ReceiveChangeDemo())
+            NavItem("Task", destination: TaskDemo())
           #endif
         }
         Section(header: Text("Selectors")) {
@@ -146,6 +149,10 @@ struct TokamakDemoView: View {
           NavItem("Text", destination: TextDemo())
           NavItem("TextField", destination: TextFieldDemo())
           NavItem("TextEditor", destination: TextEditorDemo())
+        }
+        Section(header: Text("Text")) {
+          NavItem("Gestures", destination: GesturesDemo())
+          NavItem("Gesture & CoordinateSpace", destination: GestureCoordinateSpaceDemo())
         }
         Section(header: Text("Misc")) {
           NavItem("Animation", destination: AnimationDemo())
@@ -166,12 +173,12 @@ struct TokamakDemoView: View {
             NavItem(unavailable: "Redaction")
           }
         }
-        #if os(WASI)
-        Section(header: Text("TokamakDOM")) {
-          NavItem("DOM reference", destination: DOMRefDemo())
-          NavItem("URL hash changes", destination: URLHashDemo())
-        }
-        #endif
+        // #if os(WASI)
+        //   Section(header: Text("TokamakDOM")) {
+        //     NavItem("DOM reference", destination: DOMRefDemo())
+        //     NavItem("URL hash changes", destination: URLHashDemo())
+        //   }
+        // #endif
       }
       .frame(minHeight: 300),
       title: "Demos"

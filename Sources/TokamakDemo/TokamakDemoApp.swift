@@ -18,14 +18,12 @@ import TokamakShim
 @main
 struct TokamakDemoApp: App {
   static let _configuration: _AppConfiguration = .init(
-    reconciler: .fiber(useDynamicLayout: true)
+    reconciler: .stack
   )
-
-  @State private var fullText: String = "This is some editable text..."
 
   var body: some Scene {
     WindowGroup("Tokamak Demo") {
-      Text("Hello, Tokamak!")
+      TokamakDemoView()
     }
   }
 }

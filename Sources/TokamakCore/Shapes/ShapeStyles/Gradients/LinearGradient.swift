@@ -19,9 +19,9 @@ import Foundation
 
 @frozen
 public struct LinearGradient: @MainActor ShapeStyle, @MainActor View {
-  internal var gradient: Gradient
-  internal var startPoint: UnitPoint
-  internal var endPoint: UnitPoint
+  var gradient: Gradient
+  var startPoint: UnitPoint
+  var endPoint: UnitPoint
 
   public init(gradient: Gradient, startPoint: UnitPoint, endPoint: UnitPoint) {
     self.gradient = gradient

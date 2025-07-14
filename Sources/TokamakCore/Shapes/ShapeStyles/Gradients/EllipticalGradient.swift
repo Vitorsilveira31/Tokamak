@@ -19,10 +19,10 @@ import Foundation
 
 @frozen
 public struct EllipticalGradient: ShapeStyle, @MainActor View {
-  internal var gradient: Gradient
-  internal var center: UnitPoint
-  internal var startRadiusFraction: CGFloat
-  internal var endRadiusFraction: CGFloat
+  var gradient: Gradient
+  var center: UnitPoint
+  var startRadiusFraction: CGFloat
+  var endRadiusFraction: CGFloat
 
   public init(
     gradient: Gradient,
@@ -82,8 +82,8 @@ public struct EllipticalGradient: ShapeStyle, @MainActor View {
   public static func _apply(to type: inout _ShapeStyle_ShapeType) {}
 }
 
-public extension ShapeStyle where Self == EllipticalGradient {
-  static func ellipticalGradient(
+extension ShapeStyle where Self == EllipticalGradient {
+  public static func ellipticalGradient(
     _ gradient: Gradient,
     center: UnitPoint = .center,
     startRadiusFraction: CGFloat = 0,
@@ -96,7 +96,7 @@ public extension ShapeStyle where Self == EllipticalGradient {
     )
   }
 
-  static func ellipticalGradient(
+  public static func ellipticalGradient(
     colors: [Color],
     center: UnitPoint = .center,
     startRadiusFraction: CGFloat = 0,
@@ -109,7 +109,7 @@ public extension ShapeStyle where Self == EllipticalGradient {
     )
   }
 
-  static func ellipticalGradient(
+  public static func ellipticalGradient(
     stops: [Gradient.Stop],
     center: UnitPoint = .center,
     startRadiusFraction: CGFloat = 0,

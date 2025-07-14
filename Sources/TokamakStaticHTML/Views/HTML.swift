@@ -81,8 +81,10 @@ extension AnyHTML {
       <\(tag)\(attributes.isEmpty ? "" : " ")\
       \(renderedAttributes)>\
       \(innerHTML(shouldSortAttributes: shouldSortAttributes) ?? "")\
-      \(children.map { $0.outerHTML(shouldSortAttributes: shouldSortAttributes) }
-      .joined(separator: "\n"))\
+      \(
+        children.map { $0.outerHTML(shouldSortAttributes: shouldSortAttributes) }
+          .joined(separator: "\n")
+      )\
       </\(tag)>
       """
   }

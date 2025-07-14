@@ -67,7 +67,7 @@ public protocol StackLayout: Layout where Cache == StackLayoutCache {
 extension StackLayout {
   public static var layoutProperties: LayoutProperties {
     var properties = LayoutProperties()
-    properties.stackOrientation = Self.orientation
+    properties.stackOrientation = orientation
     return properties
   }
 

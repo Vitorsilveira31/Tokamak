@@ -29,7 +29,8 @@ public protocol Scene {
 
   func _visitChildren<V: SceneVisitor>(_ visitor: V)
 
-  /// Create `SceneOutputs`, including any modifications to the environment, preferences, or a custom
+  /// Create `SceneOutputs`, including any modifications to the environment, preferences, or a
+  /// custom
   /// `LayoutComputer` from the `SceneInputs`.
   ///
   /// > At the moment, `SceneInputs`/`SceneOutputs` are identical to `ViewInputs`/`ViewOutputs`.

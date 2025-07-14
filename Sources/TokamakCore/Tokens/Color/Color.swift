@@ -26,7 +26,7 @@ public struct Color: Hashable, Equatable, Sendable {
 
   let provider: AnyColorBox
 
-  internal init(_ provider: AnyColorBox) {
+  init(_ provider: AnyColorBox) {
     self.provider = provider
   }
 
@@ -60,7 +60,9 @@ public struct Color: Hashable, Equatable, Sendable {
 
   /// Create a `Color` dependent on the current `ColorScheme`.
   @_spi(TokamakCore)
-  public static func _withScheme(_ resolver: @MainActor @Sendable @escaping (ColorScheme) -> Self) -> Self {
+  public static func _withScheme(_ resolver: @MainActor @Sendable @escaping (ColorScheme) -> Self)
+    -> Self
+  {
     .init(
       _EnvironmentDependentColorBox {
         resolver($0.colorScheme)

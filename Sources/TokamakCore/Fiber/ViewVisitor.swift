@@ -38,12 +38,12 @@ protocol ViewReducer {
 
 extension ViewReducer {
   static func reduce<V: View>(into partialResult: inout Result, nextView: V) {
-    partialResult = Self.reduce(partialResult: partialResult, nextView: nextView)
+    partialResult = reduce(partialResult: partialResult, nextView: nextView)
   }
 
   static func reduce<V: View>(partialResult: Result, nextView: V) -> Result {
     var result = partialResult
-    Self.reduce(into: &result, nextView: nextView)
+    reduce(into: &result, nextView: nextView)
     return result
   }
 }

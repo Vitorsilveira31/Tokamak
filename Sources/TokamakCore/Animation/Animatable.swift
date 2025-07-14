@@ -85,7 +85,7 @@ where First: VectorArithmetic, Second: VectorArithmetic {
   }
 
   @inlinable
-  internal subscript() -> (First, Second) {
+  subscript() -> (First, Second) {
     get { (first, second) }
     set { (first, second) = newValue }
   }

@@ -60,7 +60,7 @@ extension FiberReconciler {
     }
 
     static func reduce<S>(into partialResult: inout Result, nextScene: S) where S: Scene {
-      Self.reduce(
+      reduce(
         into: &partialResult,
         nextValue: nextScene,
         createFiber: { scene, element, parent, elementParent, preferenceParent, _, _, reconciler in
@@ -83,7 +83,7 @@ extension FiberReconciler {
     }
 
     static func reduce<V>(into partialResult: inout Result, nextView: V) where V: View {
-      Self.reduce(
+      reduce(
         into: &partialResult,
         nextValue: nextView,
         createFiber: {
