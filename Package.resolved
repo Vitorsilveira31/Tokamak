@@ -1,13 +1,13 @@
 {
-  "originHash" : "27469b7b6692761dfc7c0f6ad20b87ddce1d0b8791f4420b8f89c7c1045788a5",
+  "originHash" : "941b142ebbd30ca42aa88fc4718d6e8ca01a5de8a567d5399a82522f20282be8",
   "pins" : [
     {
       "identity" : "javascriptkit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftwasm/JavaScriptKit.git",
       "state" : {
-        "revision" : "387347ac51b133b801c23f124dd8fe64cc4298c7",
-        "version" : "0.31.1"
+        "revision" : "e854719ecf1f87fa5015fc8da88cb11832aa1fc8",
+        "version" : "0.31.2"
       }
     },
     {
@@ -22,7 +22,7 @@
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-argument-parser.git",
+      "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
         "revision" : "46989693916f56d1186bd59ac15124caef896560",
         "version" : "1.3.1"
@@ -56,21 +56,12 @@
       }
     },
     {
-      "identity" : "swift-custom-dump",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pointfreeco/swift-custom-dump",
-      "state" : {
-        "revision" : "82645ec760917961cfa08c9c0c7104a57a0fa4b1",
-        "version" : "1.3.3"
-      }
-    },
-    {
       "identity" : "swift-foundation",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-foundation.git",
       "state" : {
         "branch" : "main",
-        "revision" : "eb084da833b155e2e440d6ca3ae9da32b1fd4cba"
+        "revision" : "d1b47985d44ea82dfc5e48b1b40f8c36fe9679d9"
       }
     },
     {
@@ -79,7 +70,7 @@
       "location" : "https://github.com/apple/swift-foundation-icu",
       "state" : {
         "branch" : "main",
-        "revision" : "fa359a2a34c456f7b1ec985c23cde558be1b6cc6"
+        "revision" : "1323bae3d5399ebeda603069767e0651af7eea8a"
       }
     },
     {
@@ -96,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-snapshot-testing.git",
       "state" : {
-        "revision" : "37230a37e83f1b7023be08e1b1a2603fcb1567fb",
-        "version" : "1.18.4"
+        "revision" : "f8a9c997c3c1dab4e216a8ec9014e23144cbab37",
+        "version" : "1.9.0"
       }
     },
     {
@@ -106,7 +97,7 @@
       "location" : "https://github.com/swiftlang/swift-syntax",
       "state" : {
         "branch" : "main",
-        "revision" : "c40a97806034b34494d0989648dbcb9aa36bd855"
+        "revision" : "7b1fcd6ced8269aa030e042b2e9d8938174ea237"
       }
     },
     {
@@ -125,15 +116,6 @@
       "state" : {
         "revision" : "d04b31f61b6f528a9a96ebfe4fa4275e333eba82",
         "version" : "0.5.0"
-      }
-    },
-    {
-      "identity" : "xctest-dynamic-overlay",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pointfreeco/xctest-dynamic-overlay",
-      "state" : {
-        "revision" : "39de59b2d47f7ef3ca88a039dff3084688fe27f4",
-        "version" : "1.5.2"
       }
     }
   ],
