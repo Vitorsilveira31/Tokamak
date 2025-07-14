@@ -199,12 +199,11 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
         alternateRoot = root.createAndBindAlternate?()
       }
       let rootResult = TreeReducer.Result(
-        fiber: alternateRoot,  // The alternate is the WIP node.
+        fiber: alternateRoot, // The alternate is the WIP node.
+        currentChildren: root.mappedChildren,
         visitChildren: visitChildren,
         parent: nil,
-        child: alternateRoot?.child,
-        alternateChild: root.child,
-        elementIndices: [:],
+        newContent: nil,
         nextTraits: .init()
       )
       reconciler.caches.clear()

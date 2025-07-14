@@ -115,7 +115,7 @@ extension _BackgroundStyleModifier: @MainActor HTMLConvertible,
 struct _BackgroundStyleLayout<
   Content: View,
   Style: ShapeStyle
->: _PrimitiveView, HTMLConvertible, Layout {
+>: _PrimitiveView, HTMLConvertible, @MainActor Layout {
   let style: Style
   let backgroundLayout: _BackgroundLayout<Content, _ShapeView<Rectangle, Style>>
 
