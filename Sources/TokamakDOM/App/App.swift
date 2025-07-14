@@ -20,12 +20,12 @@ import OpenCombineShim
 import TokamakCore
 import TokamakStaticHTML
 
-public extension App {
-  static func _launch(_ app: Self, with configuration: _AppConfiguration) {
+extension App {
+  public static func _launch(_ app: Self, with configuration: _AppConfiguration) {
     switch configuration.reconciler {
     case .stack:
       _launch(app, configuration.rootEnvironment, TokamakDOM.body)
-    case let .fiber(useDynamicLayout):
+    case .fiber(let useDynamicLayout):
       DOMFiberRenderer("body", useDynamicLayout: useDynamicLayout).render(app)
     }
   }
@@ -37,7 +37,7 @@ public extension App {
   /// The body is styled with `margin: 0;` to match the `SwiftUI` layout
   /// system as closely as possible
   ///
-  static func _launch(
+  public static func _launch(
     _ app: Self,
     _ rootEnvironment: EnvironmentValues,
     _ body: JSObject
@@ -59,18 +59,18 @@ public extension App {
     ColorSchemeObserver.observe(div)
   }
 
-  static func _setTitle(_ title: String) {
+  public static func _setTitle(_ title: String) {
     let titleTag = document.createElement!("title").object!
     titleTag.id = "_tokamak-app-title"
     titleTag.innerHTML = .string(title)
     _ = head.appendChild!(titleTag)
   }
 
-  var _phasePublisher: AnyPublisher<ScenePhase, Never> {
+  public var _phasePublisher: AnyPublisher<ScenePhase, Never> {
     ScenePhaseObserver.publisher.eraseToAnyPublisher()
   }
 
-  var _colorSchemePublisher: AnyPublisher<ColorScheme, Never> {
+  public var _colorSchemePublisher: AnyPublisher<ColorScheme, Never> {
     ColorSchemeObserver.publisher.eraseToAnyPublisher()
   }
 }

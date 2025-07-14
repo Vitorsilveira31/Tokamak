@@ -290,6 +290,7 @@ public struct DOMFiberRenderer: FiberRenderer {
   }
 
   public func commit(_ mutations: [Mutation<Self>]) {
+    print("Eita caiu no DOMFiberRenderer commit", mutations)
     for mutation in mutations {
       switch mutation {
       case .insert(let newElement, let parent, let index):

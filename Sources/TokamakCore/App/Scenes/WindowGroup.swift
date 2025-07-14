@@ -76,6 +76,7 @@ public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
   //  }
 
   public func _visitChildren<V>(_ visitor: V) where V: SceneVisitor {
+    print("Olha o visitChildren do WindowGroup", content, content.body)
     visitor.visit(content)
   }
 }

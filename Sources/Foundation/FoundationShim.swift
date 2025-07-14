@@ -91,7 +91,6 @@
   }
 
   extension CGRect {
-
     public init(x: CGFloat = 0, y: CGFloat = 0, width: CGFloat, height: CGFloat) {
       self.origin = CGPoint(x: x, y: y)
       self.size = CGSize(width: width, height: height)

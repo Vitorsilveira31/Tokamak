@@ -24,8 +24,8 @@ public protocol TestFiberPrimitive {
   var attributes: [String: Any] { get }
 }
 
-public extension TestFiberPrimitive {
-  var tag: String { String(String(reflecting: Self.self).split(separator: "<")[0]) }
+extension TestFiberPrimitive {
+  public var tag: String { String(String(reflecting: Self.self).split(separator: "<")[0]) }
 }
 
 extension VStack: TestFiberPrimitive {
@@ -162,23 +162,24 @@ public struct TestFiberRenderer: FiberRenderer {
   public func commit(_ mutations: [Mutation<Self>]) {
     for mutation in mutations {
       switch mutation {
-      case let .insert(element, parent, index):
+      case .insert(let element, let parent, let index):
         parent.children.insert(element, at: index)
-      case let .remove(element, parent):
+      case .remove(let element, let parent):
         parent?.children.removeAll(where: { $0 === element })
-      case let .replace(parent, previous, replacement):
+      case .replace(let parent, let previous, let replacement):
         guard let index = parent.children.firstIndex(where: { $0 === previous })
         else { continue }
         parent.children[index] = replacement
-      case let .layout(element, geometry):
+      case .layout(let element, let geometry):
         element.geometry = geometry
-      case let .update(previous, newContent, _):
+      case .update(let previous, let newContent, _):
         previous.update(with: newContent)
       }
     }
   }
 
-  public func schedule(_ action: @escaping () -> ()) {
+  public func schedule(_ action: @escaping () -> Void) {
+    print("Vish caiu aqui no schedule")
     action()
   }
 }

@@ -22,6 +22,7 @@
 
 extension View {
   public func _visitChildren<V: ViewVisitor>(_ visitor: V) {
+    print("Olha o visitChildren do ViewVisitor", visitor, body)
     visitor.visit(body)
   }
 }

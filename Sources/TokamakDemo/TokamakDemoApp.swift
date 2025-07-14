@@ -16,15 +16,16 @@ import JavaScriptKit
 import TokamakShim
 
 @main
-struct TokamakDemoApp: @MainActor App {
+struct TokamakDemoApp: App {
+  static let _configuration: _AppConfiguration = .init(
+    reconciler: .fiber(useDynamicLayout: true)
+  )
 
-  @Environment(\.scenePhase)
-  private var scenePhase
+  @State private var fullText: String = "This is some editable text..."
 
   var body: some Scene {
     WindowGroup("Tokamak Demo") {
-      TokamakDemoView()
+      Text("Hello, Tokamak!")
     }
   }
-
 }

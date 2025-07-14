@@ -178,6 +178,7 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
     }
 
     func visit<A>(_ app: A) where A: App {
+      print("caiu aqui meu \(app)")
       visitAny(app) { $0.visit(app.body) }
     }
 
@@ -251,22 +252,31 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   ///
   /// A `reconcile()` call is queued from `fiberChanged` once per run loop.
   func reconcile() {
+    print(
+      "Olha caiu no reconcile", changedFibers, self.changedFibers, isReconciling, current, alternate
+    )
     isReconciling = true
     let changedFibers = changedFibers
     self.changedFibers.removeAll()
+    print("Olha caiu no reconcile2", changedFibers, self.changedFibers)
     // Create a list of mutations.
     let visitor = ReconcilerVisitor(root: current, changedFibers: changedFibers, reconciler: self)
     switch current.content {
     case .view(_, let visit):
+      print("Olha caiu no reconcile3 view", visit)
       visit(visitor)
     case .scene(_, let visit):
+      print("Olha caiu no reconcile4 scene", visit)
       visit(visitor)
     case .app(_, let visit):
+      print("Olha caiu no reconcile5 app", visit)
       visit(visitor)
     case .none:
+      print("Olha caiu no reconcile6 none")
       break
     }
 
+    print("Olha caiu no reconcile7", visitor.mutations, alternate)
     // Apply mutations to the rendered output.
     renderer.commit(visitor.mutations)
 

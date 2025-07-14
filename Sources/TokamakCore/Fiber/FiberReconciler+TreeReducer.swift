@@ -19,10 +19,7 @@ import Foundation
 
 extension FiberReconciler {
   /// Convert the first level of children of a `View` into a linked list of `Fiber`s.
-  @MainActor
-  struct TreeReducer: @MainActor SceneReducer {
-
-    @MainActor
+  struct TreeReducer: SceneReducer {
     final class Result {
       // For references
       let fiber: Fiber?
@@ -41,7 +38,7 @@ extension FiberReconciler {
 
       init(
         fiber: Fiber?,
-        visitChildren: @escaping @MainActor @Sendable (TreeReducer.SceneVisitor) -> Void,
+        visitChildren: @escaping (TreeReducer.SceneVisitor) -> Void,
         parent: Result?,
         child: Fiber?,
         alternateChild: Fiber?,
@@ -109,7 +106,7 @@ extension FiberReconciler {
           )
         },
         visitChildren: { reconciler, view in
-          reconciler?.renderer.viewVisitor(for: view) ?? { v in view._visitChildren(v) }
+          reconciler?.renderer.viewVisitor(for: view) ?? view._visitChildren
         }
       )
     }
@@ -128,7 +125,7 @@ extension FiberReconciler {
         FiberReconciler?
       ) -> Fiber,
       update: (Fiber, inout T, Int?, _ViewTraitStore) -> Renderer.ElementType.Content?,
-      visitChildren: @escaping (FiberReconciler?, T) -> (TreeReducer.SceneVisitor) -> Void
+      visitChildren: (FiberReconciler?, T) -> (TreeReducer.SceneVisitor) -> Void
     ) {
       // Create the node and its element.
       var nextValue = nextValue
@@ -148,16 +145,16 @@ extension FiberReconciler {
           key.map { partialResult.elementIndices[$0, default: 0] },
           partialResult.nextTraits
         )
-        // resultChild = Result(
-        //   fiber: existing,
-        //   visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
-        //   parent: partialResult,
-        //   child: existing.child,
-        //   alternateChild: existing.alternate?.child,
-        //   newContent: newContent,
-        //   elementIndices: partialResult.elementIndices,
-        //   nextTraits: existing.element != nil ? .init() : partialResult.nextTraits
-        // )
+        resultChild = Result(
+          fiber: existing,
+          visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
+          parent: partialResult,
+          child: existing.child,
+          alternateChild: existing.alternate?.child,
+          newContent: newContent,
+          elementIndices: partialResult.elementIndices,
+          nextTraits: existing.element != nil ? .init() : partialResult.nextTraits
+        )
         partialResult.nextExisting = existing.sibling
         partialResult.nextExistingAlternate = partialResult.nextExistingAlternate?.sibling
       } else {
@@ -192,26 +189,26 @@ extension FiberReconciler {
           fiber.alternate = alternate
           partialResult.nextExistingAlternate = alternate.sibling
         }
-        // resultChild = Result(
-        //   fiber: fiber,
-        //   visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
-        //   parent: partialResult,
-        //   child: nil,
-        //   alternateChild: fiber.alternate?.child,
-        //   elementIndices: partialResult.elementIndices,
-        //   nextTraits: fiber.element != nil ? .init() : partialResult.nextTraits
-        // )
+        resultChild = Result(
+          fiber: fiber,
+          visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
+          parent: partialResult,
+          child: nil,
+          alternateChild: fiber.alternate?.child,
+          elementIndices: partialResult.elementIndices,
+          nextTraits: fiber.element != nil ? .init() : partialResult.nextTraits
+        )
       }
       // Get the last child element we've processed, and add the new child as its sibling.
-      // if let lastSibling = partialResult.lastSibling {
-      //   lastSibling.fiber?.sibling = resultChild.fiber
-      //   lastSibling.sibling = resultChild
-      // } else {
-      //   // Otherwise setup the first child
-      //   partialResult.fiber?.child = resultChild.fiber
-      //   partialResult.child = resultChild
-      // }
-      // partialResult.lastSibling = resultChild
+      if let lastSibling = partialResult.lastSibling {
+        lastSibling.fiber?.sibling = resultChild.fiber
+        lastSibling.sibling = resultChild
+      } else {
+        // Otherwise setup the first child
+        partialResult.fiber?.child = resultChild.fiber
+        partialResult.child = resultChild
+      }
+      partialResult.lastSibling = resultChild
     }
   }
 }
