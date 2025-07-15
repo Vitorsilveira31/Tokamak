@@ -17,7 +17,6 @@
 
 import Foundation
 
-@MainActor
 public protocol Shape: Animatable, View {
   func path(in rect: CGRect) -> Path
 

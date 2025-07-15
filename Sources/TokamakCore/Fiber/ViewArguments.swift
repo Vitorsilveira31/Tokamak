@@ -98,7 +98,6 @@ extension ModifiedContent where Content: View, Modifier: ViewModifier {
   }
 
   public func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {
-    print("Olha o visitChildren do ViewArguments", visitor)
     modifier._visitChildren(visitor, content: .init(modifier: modifier, view: content))
   }
 }

@@ -197,7 +197,6 @@ public struct StaticHTMLFiberRenderer: @MainActor FiberRenderer {
   }
 
   public func commit(_ mutations: [Mutation<Self>]) {
-    print("Eita caiu no StaticHTMLFiberRenderer commit", mutations)
     for mutation in mutations {
       switch mutation {
       case .insert(let element, let parent, let index):

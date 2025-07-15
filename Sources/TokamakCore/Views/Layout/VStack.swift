@@ -38,8 +38,8 @@ public struct VStack<Content>: View where Content: View {
     self.content = content()
   }
 
-  public var body: Never {
-    neverBody("VStack")
+  public var body: Content {
+    content
   }
 
   public func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {

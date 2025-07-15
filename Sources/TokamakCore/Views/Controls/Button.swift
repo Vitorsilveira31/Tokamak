@@ -37,25 +37,26 @@
 ///     }
 public struct Button<Label>: View where Label: View {
   let label: Label
-  let action: () -> ()
+  let action: () -> Void
   let role: ButtonRole?
 
   @Environment(\.buttonStyle)
   var buttonStyle
 
-  public init(action: @escaping () -> (), @ViewBuilder label: () -> Label) {
+  public init(action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
     self.init(role: nil, action: action, label: label)
   }
 
   @_spi(TokamakCore)
   public var body: some View {
     switch buttonStyle {
-    case let .primitiveButtonStyle(style):
-      style.makeBody(configuration: .init(
-        role: role, label: .init(body: AnyView(label)),
-        action: action
-      ))
-    case let .buttonStyle(style):
+    case .primitiveButtonStyle(let style):
+      style.makeBody(
+        configuration: .init(
+          role: role, label: .init(body: AnyView(label)),
+          action: action
+        ))
+    case .buttonStyle(let style):
       _Button(
         label: label,
         role: role,
@@ -69,7 +70,7 @@ public struct Button<Label>: View where Label: View {
 public struct _PrimitiveButtonStyleBody<Label>: View where Label: View {
   public let label: Label
   public let role: ButtonRole?
-  public let action: () -> ()
+  public let action: () -> Void
 
   let anyStyle: AnyPrimitiveButtonStyle
   public var style: Any.Type { anyStyle.type }
@@ -100,7 +101,7 @@ public struct _PrimitiveButtonStyleBody<Label>: View where Label: View {
 public struct _Button<Label>: View where Label: View {
   public let label: Label
   public let role: ButtonRole?
-  public let action: () -> ()
+  public let action: () -> Void
 
   @State
   public var isPressed = false
@@ -122,16 +123,16 @@ public struct _Button<Label>: View where Label: View {
   }
 }
 
-public extension Button where Label == Text {
-  init<S>(_ title: S, action: @escaping () -> ()) where S: StringProtocol {
+extension Button where Label == Text {
+  public init<S>(_ title: S, action: @escaping () -> Void) where S: StringProtocol {
     self.init(title, role: nil, action: action)
   }
 }
 
-public extension Button {
-  init(
+extension Button {
+  public init(
     role: ButtonRole?,
-    action: @escaping () -> (),
+    action: @escaping () -> Void,
     @ViewBuilder label: () -> Label
   ) {
     self.label = label()
@@ -140,11 +141,11 @@ public extension Button {
   }
 }
 
-public extension Button where Label == Text {
-  init<S>(
+extension Button where Label == Text {
+  public init<S>(
     _ title: S,
     role: ButtonRole?,
-    action: @escaping () -> ()
+    action: @escaping () -> Void
   ) where S: StringProtocol {
     label = Text(title)
     self.action = action

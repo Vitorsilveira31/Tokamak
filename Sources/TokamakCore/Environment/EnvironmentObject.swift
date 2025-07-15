@@ -40,7 +40,7 @@ where ObjectType: ObservableObject {
   var _store: ObjectType?
   var _seed: Int = 0
 
-  mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     _store = values[ObjectIdentifier(ObjectType.self)]
   }
 
@@ -65,7 +65,10 @@ where ObjectType: ObservableObject {
   public init() {}
 }
 
-extension EnvironmentObject: ObservedProperty, EnvironmentReader {}
+extension EnvironmentObject: ObservedProperty {}
+
+@_spi(TokamakCore)
+extension EnvironmentObject: _EnvironmentReader {}
 
 @MainActor
 extension ObservableObject {

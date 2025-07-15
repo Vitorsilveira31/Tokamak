@@ -22,7 +22,7 @@ public struct TupleView<T>: _PrimitiveView {
   public let value: T
 
   let _children: [AnyView]
-  private let visit: (ViewVisitor) -> ()
+  private let visit: (ViewVisitor) -> Void
 
   public init(_ value: T) {
     self.value = value
@@ -65,8 +65,7 @@ public struct TupleView<T>: _PrimitiveView {
   }
 
   init<T1: View, T2: View, T3: View, T4: View>(_ v1: T1, _ v2: T2, _ v3: T3, _ v4: T4)
-    where T == (T1, T2, T3, T4)
-  {
+  where T == (T1, T2, T3, T4) {
     value = (v1, v2, v3, v4)
     _children = [AnyView(v1), AnyView(v2), AnyView(v3), AnyView(v4)]
     visit = {

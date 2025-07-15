@@ -22,7 +22,13 @@
 
 extension View {
   public func _visitChildren<V: ViewVisitor>(_ visitor: V) {
-    print("Olha o visitChildren do ViewVisitor", visitor, body)
+    print("🖼 View._visitChildren called for:", String(describing: type(of: self)))
+    print("🖼 View body type:", String(describing: type(of: body)))
+    print("🖼 View visitor type:", String(describing: type(of: visitor)))
+    if self is any _PrimitiveView {
+      print("🖼 This is a primitive view, skipping body visit")
+      return
+    }
     visitor.visit(body)
   }
 }
@@ -58,6 +64,7 @@ final class ReducerVisitor<R: ViewReducer>: ViewVisitor {
   }
 
   func visit<V>(_ view: V) where V: View {
+    print("🔵 ViewReducer.visit called for:", String(describing: type(of: view)))
     R.reduce(into: &result, nextView: view)
   }
 }

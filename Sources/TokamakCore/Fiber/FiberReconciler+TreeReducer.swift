@@ -60,12 +60,20 @@ extension FiberReconciler {
     }
 
     static func reduce<S>(into partialResult: inout Result, nextScene: S) where S: Scene {
+      print("🌳 TreeReducer.reduce Scene:", String(describing: type(of: nextScene)))
+      print("🌳 Result initial state:")
+      print("  - Has fiber:", partialResult.fiber != nil)
+      print("  - Has parent:", partialResult.parent != nil)
+      print("  - Current children count:", partialResult.processedChildCount)
+
       reduce(
         into: &partialResult,
         nextValue: nextScene,
         createFiber: { scene, element, parent, elementParent, preferenceParent, _, _, reconciler in
-          Fiber(
-            &scene,
+          print("🌳 Creating Scene Fiber for:", String(describing: type(of: scene)))
+          var mutableScene = scene
+          return Fiber(
+            &mutableScene,
             element: element,
             parent: parent,
             elementParent: elementParent,
@@ -75,11 +83,36 @@ extension FiberReconciler {
           )
         },
         update: { fiber, scene, _, _ in
-          fiber.update(with: &scene)
+          print("🌳 Updating Scene Fiber for:", String(describing: type(of: scene)))
+          var mutableScene = scene
+          return fiber.update(with: &mutableScene)
         },
-        visitChildren: { $1._visitChildren },
-        isPrimitive: { _ in false }
+        visitChildren: { reconciler, scene in
+          { visitor in
+            print("🌳 Setting up Scene visitChildren for:", String(describing: type(of: scene)))
+            if let windowGroup = scene as? (any Scene & ParentView) {
+              print("🌳 Found WindowGroup-like scene with children")
+              print("🌳 Visiting scene children directly")
+              for child in windowGroup.children {
+                visitor.visit(child)
+              }
+            } else {
+              print("🌳 Regular scene visit")
+              scene._visitChildren(visitor)
+            }
+            print("🌳 Scene children visit completed")
+          }
+        },
+        isPrimitive: { value in
+          if let view = value as? any View {
+            let isPrim = Renderer.isPrimitive(view)
+            print("🌳 View primitive check:", String(describing: type(of: view)), "=", isPrim)
+            return isPrim
+          }
+          return false
+        }
       )
+      print("🌳 TreeReducer.reduce Scene completed")
     }
 
     static func reduce<V>(into partialResult: inout Result, nextView: V) where V: View {
@@ -109,7 +142,9 @@ extension FiberReconciler {
           )
         },
         visitChildren: { reconciler, view in
-          reconciler?.renderer.viewVisitor(for: view) ?? view._visitChildren
+          // Always use _visitChildren for traversal
+          // This handles both primitive and non-primitive views correctly
+          return view._visitChildren
         },
         isPrimitive: { view in
           Renderer.isPrimitive(view)

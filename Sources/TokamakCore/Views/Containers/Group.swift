@@ -19,7 +19,11 @@ public struct Group<Content> {
   }
 }
 
-extension Group: _PrimitiveView, View where Content: View {
+extension Group: View where Content: View {
+  public var body: Content {
+    content
+  }
+
   public func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {
     visitor.visit(content)
   }

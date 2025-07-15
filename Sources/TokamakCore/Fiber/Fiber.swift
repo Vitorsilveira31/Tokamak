@@ -135,7 +135,7 @@ extension FiberReconciler {
 
     /// The explicit identity of this `View`, if provided
     var explicitId: AnyHashable? {
-      guard case let .view(v as _AnyIDView, _) = content else { return nil }
+      guard case .view(let v as _AnyIDView, _) = content else { return nil }
       return v.anyId
     }
 
@@ -328,8 +328,8 @@ extension FiberReconciler {
           storage.getter = { box.value }
           value = storage
           // Read from the environment.
-        } else if var environmentReader = value as? EnvironmentReader {
-          environmentReader.setContent(from: environment)
+        } else if var environmentReader = value as? _EnvironmentReader {
+          environmentReader._setContent(from: environment)
           value = environmentReader
         }
         // Subscribe to observable properties.
@@ -341,8 +341,8 @@ extension FiberReconciler {
         }
         property.set(value: value, on: &content)
       }
-      if var environmentReader = content as? EnvironmentReader {
-        environmentReader.setContent(from: environment)
+      if var environmentReader = content as? _EnvironmentReader {
+        environmentReader._setContent(from: environment)
         content = environmentReader
       }
     }
@@ -410,7 +410,8 @@ extension FiberReconciler {
       }
 
       if Renderer.isPrimitive(view), let element = element {
-        let newContent = Renderer.ElementType.Content(from: view, useDynamicLayout: reconciler?.renderer.useDynamicLayout ?? false)
+        let newContent = Renderer.ElementType.Content(
+          from: view, useDynamicLayout: reconciler?.renderer.useDynamicLayout ?? false)
         return (element.content != newContent) ? newContent : nil
       } else {
         return nil

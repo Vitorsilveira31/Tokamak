@@ -85,6 +85,19 @@ extension FiberReconciler.Fiber {
     changedFibers: Set<ObjectIdentifier>,
     caches: FiberReconciler<R>.Caches
   ) where R: FiberRenderer {
+    print("🎯 ReconcilePass.run starting")
+    print("🎯 Root fiber:", String(describing: root.fiber?.content))
+    print("🎯 Root fiber exists:", root.fiber != nil)
+    print("🎯 Changed fibers count:", changedFibers.count)
+
+    // Create a visitor to walk the tree
+    let visitor = SceneReducerVisitor<FiberReconciler<R>.TreeReducer>(initialResult: root)
+    print("🎯 Created SceneReducerVisitor with TreeReducer")
+
+    // Visit the content using the visitor
+    print("🎯 About to call visitChildren")
+    root.visitChildren(visitor)
+
     var node = root
 
     func mutationsForRemoving(_ fiber: FiberReconciler<R>.Fiber) -> [Mutation<R>] {
@@ -153,9 +166,12 @@ extension FiberReconciler.Fiber {
 
       // Update `DynamicProperty`s before accessing the `View`'s body.
       node.fiber?.updateDynamicProperties()
+
       // Compute the children of the node.
+      print("🎯 About to call visitChildren for node:", String(describing: node.fiber?.content))
       let reducer = FiberReconciler<R>.TreeReducer.SceneVisitor(initialResult: node)
       node.visitChildren(reducer)
+      print("🎯 VisitChildren completed for node")
 
       for orphan in reducer.result.unclaimedCurrentChildren.values {
         orphan.callOnDisappearRecursive()

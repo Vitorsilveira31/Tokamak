@@ -36,16 +36,13 @@ extension LazyVGrid: @MainActor _HTMLPrimitive {
     _LazyVGridProxy(self).columns.last
   }
 
-  @_spi(TokamakStaticHTML)
-  public var renderedBody: AnyView {
+  var styles: String {
     var styles = """
       display: grid;
-      grid-template-columns: \(
-        _LazyVGridProxy(self)
-          .columns
-          .map(\.description)
-          .joined(separator: " ")
-      );
+      grid-template-columns: \(_LazyVGridProxy(self)
+      .columns
+      .map(\.description)
+      .joined(separator: " "));
       grid-auto-flow: row;
       """
     if fillCrossAxis {
@@ -56,10 +53,30 @@ extension LazyVGrid: @MainActor _HTMLPrimitive {
       styles += "justify-items: \(lastCol.alignment.horizontal.cssValue);"
       styles += "align-items: \(lastCol.alignment.vertical.cssValue);"
     }
-    styles += "grid-gap: \(_LazyVGridProxy(self).spacing)px;"
-    return AnyView(
+    styles += "grid-gap: \(_LazyVGridProxy(self).spacing ?? 8)px;"
+    return styles
+  }
+
+  @_spi(TokamakStaticHTML)
+  public var renderedBody: AnyView {
+    AnyView(
       HTML("div", ["style": styles]) {
         _LazyVGridProxy(self).content
       })
+  }
+}
+
+@_spi(TokamakStaticHTML)
+extension LazyVGrid: HTMLConvertible {
+  public var tag: String { "div" }
+  public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
+    guard !useDynamicLayout else { return [:] }
+    return ["style": styles]
+  }
+
+  public func primitiveVisitor<V>(useDynamicLayout: Bool) -> ((V) -> Void)? where V: ViewVisitor {
+    {
+      $0.visit(_LazyVGridProxy(self).content)
+    }
   }
 }

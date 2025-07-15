@@ -37,8 +37,7 @@ where Content: View, Background: View {
   }
 }
 
-public struct _BackgroundModifier<Background>: ViewModifier, EnvironmentReader
-where Background: View {
+public struct _BackgroundModifier<Background>: ViewModifier where Background: View {
   public var environment: EnvironmentValues!
   public var background: Background
   public var alignment: Alignment
@@ -56,10 +55,13 @@ where Background: View {
     )
   }
 
-  mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     environment = values
   }
 }
+
+@_spi(TokamakCore)
+extension _BackgroundModifier: _EnvironmentReader {}
 
 extension _BackgroundModifier: @MainActor Equatable where Background: Equatable {
   public static func == (
@@ -88,7 +90,7 @@ extension View {
 }
 
 @frozen
-public struct _BackgroundShapeModifier<Style, Bounds>: ViewModifier, EnvironmentReader
+public struct _BackgroundShapeModifier<Style, Bounds>: ViewModifier
 where Style: ShapeStyle, Bounds: Shape {
   public var environment: EnvironmentValues!
 
@@ -108,10 +110,13 @@ where Style: ShapeStyle, Bounds: Shape {
       .background(shape.fill(style, style: fillStyle))
   }
 
-  public mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     environment = values
   }
 }
+
+@_spi(TokamakCore)
+extension _BackgroundShapeModifier: _EnvironmentReader {}
 
 extension View {
   @inlinable
@@ -145,7 +150,7 @@ where Content: View, Overlay: View {
   }
 }
 
-public struct _OverlayModifier<Overlay>: ViewModifier, EnvironmentReader
+public struct _OverlayModifier<Overlay>: ViewModifier
 where Overlay: View {
   public var environment: EnvironmentValues!
   public var overlay: Overlay
@@ -164,10 +169,13 @@ where Overlay: View {
     )
   }
 
-  mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     environment = values
   }
 }
+
+@_spi(TokamakCore)
+extension _OverlayModifier: _EnvironmentReader {}
 
 extension _OverlayModifier: @MainActor Equatable where Overlay: Equatable {
   public static func == (lhs: _OverlayModifier<Overlay>, rhs: _OverlayModifier<Overlay>) -> Bool {

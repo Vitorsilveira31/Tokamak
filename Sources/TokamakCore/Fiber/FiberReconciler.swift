@@ -162,52 +162,76 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   /// A visitor that performs each pass used by the `FiberReconciler`.
   @MainActor final class ReconcilerVisitor: @MainActor AppVisitor, SceneVisitor, ViewVisitor {
     let root: Fiber
-    /// Any `Fiber`s that changed state during the last run loop.
     let changedFibers: Set<ObjectIdentifier>
     unowned let reconciler: FiberReconciler
     var mutations = [Mutation<Renderer>]()
 
     init(root: Fiber, changedFibers: Set<ObjectIdentifier>, reconciler: FiberReconciler) {
+      print("🟣 Creating ReconcilerVisitor")
       self.root = root
       self.changedFibers = changedFibers
       self.reconciler = reconciler
     }
 
     func visit<A>(_ app: A) where A: App {
-      print("caiu aqui meu \(app)")
-      visitAny(app) { $0.visit(app.body) }
+      print("🟦 Visiting App:", String(describing: type(of: app)))
+      visitAny(app) { vis in
+        print("🟦 App visitor type:", String(describing: type(of: vis)))
+        // Since the cast always succeeds, we can directly use it
+        print("🟦 About to visit App children with SceneVisitor")
+        app._visitChildren(vis)
+      }
     }
 
     func visit<S>(_ scene: S) where S: Scene {
+      print("🟨 Visiting Scene:", String(describing: type(of: scene)))
       visitAny(scene) { vis in
+        print("🟨 Scene visitor type:", String(describing: type(of: vis)))
+        print("🟨 About to visit Scene children")
         scene._visitChildren(vis)
       }
     }
 
     func visit<V>(_ view: V) where V: View {
-      visitAny(view, reconciler.renderer.viewVisitor(for: view))
+      print("🟩 Visiting View:", String(describing: type(of: view)))
+      print("🟩 View type info - isPrimitive:", view is any _PrimitiveView)
+      visitAny(view) { vis in
+        print("🟩 View visitor type:", String(describing: type(of: vis)))
+        print("🟩 About to visit View children")
+        view._visitChildren(vis)
+      }
     }
 
     private func visitAny(
       _ content: Any,
       _ visitChildren: @escaping @MainActor (TreeReducer.SceneVisitor) -> Void
     ) {
+      print("⚪️ visitAny called with content type:", String(describing: type(of: content)))
       let alternateRoot: Fiber?
       if let alternate = root.alternate {
+        print("⚪️ Using existing alternate root")
         alternateRoot = alternate
       } else {
+        print("⚪️ Creating new alternate root")
         alternateRoot = root.createAndBindAlternate?()
       }
+
+      print("⚪️ Creating TreeReducer.Result")
       let rootResult = TreeReducer.Result(
-        fiber: alternateRoot, // The alternate is the WIP node.
+        fiber: alternateRoot,  // The alternate is the WIP node.
         currentChildren: root.mappedChildren,
         visitChildren: visitChildren,
         parent: nil,
         newContent: nil,
         nextTraits: .init()
       )
+
+      print("⚪️ Clearing caches")
       reconciler.caches.clear()
+
+      print("⚪️ Running passes:", reconciler.passes)
       for pass in reconciler.passes {
+        print("⚪️ Running pass:", String(describing: type(of: pass)))
         pass.run(
           in: reconciler,
           root: rootResult,
@@ -215,6 +239,8 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
           caches: reconciler.caches
         )
       }
+
+      print("⚪️ Setting mutations from caches")
       mutations = reconciler.caches.mutations
     }
   }
@@ -238,30 +264,29 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   ///
   /// A `reconcile()` call is queued from `fiberChanged` once per run loop.
   func reconcile() {
-    print(
-      "Olha caiu no reconcile", changedFibers, self.changedFibers, current, alternate
-    )
+    print("🔄 Reconciling with changedFibers:", changedFibers)
+    print("🔄 Current fiber:", String(describing: current))
+    print("🔄 Alternate fiber:", String(describing: alternate))
+
     let changedFibers = changedFibers
     self.changedFibers.removeAll()
-    print("Olha caiu no reconcile2", changedFibers, self.changedFibers)
     // Create a list of mutations.
     let visitor = ReconcilerVisitor(root: current, changedFibers: changedFibers, reconciler: self)
     switch current.content {
     case .view(_, let visit):
-      print("Olha caiu no reconcile3 view", visit)
       visit(visitor)
     case .scene(_, let visit):
-      print("Olha caiu no reconcile4 scene", visit)
       visit(visitor)
     case .app(_, let visit):
-      print("Olha caiu no reconcile5 app", visit)
       visit(visitor)
     case .none:
-      print("Olha caiu no reconcile6 none")
       break
     }
 
-    print("Olha caiu no reconcile7", visitor.mutations, alternate)
+    print("✅ Reconciliation complete - Mutations:", visitor.mutations.count)
+    if let alternate = alternate {
+      print("✅ Alternate fiber:", String(describing: alternate))
+    }
     // Apply mutations to the rendered output.
     renderer.commit(visitor.mutations)
 

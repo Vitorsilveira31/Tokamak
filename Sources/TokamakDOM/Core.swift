@@ -177,6 +177,9 @@ public typealias Toggle = TokamakCore.Toggle
 public typealias VStack = TokamakCore.VStack
 public typealias ZStack = TokamakCore.ZStack
 
+public typealias Grid = TokamakCore.Grid
+public typealias GridRow = TokamakCore.GridRow
+
 // MARK: Gestures
 
 public typealias Gesture = TokamakCore.Gesture

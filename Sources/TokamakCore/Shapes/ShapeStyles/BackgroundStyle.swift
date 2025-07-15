@@ -57,8 +57,7 @@ extension View {
 }
 
 @frozen
-public struct _BackgroundStyleModifier<Style>: ViewModifier, @MainActor _EnvironmentModifier,
-  EnvironmentReader
+public struct _BackgroundStyleModifier<Style>: ViewModifier, _EnvironmentModifier
 where Style: ShapeStyle {
   public var environment: EnvironmentValues!
   public var style: Style
@@ -69,7 +68,7 @@ where Style: ShapeStyle {
   }
 
   public typealias Body = Never
-  public mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     environment = values
   }
 
@@ -84,3 +83,6 @@ where Style: ShapeStyle {
 extension ShapeStyle where Self == BackgroundStyle {
   public static var background: Self { .init() }
 }
+
+@_spi(TokamakCore)
+extension _BackgroundStyleModifier: _EnvironmentReader {}

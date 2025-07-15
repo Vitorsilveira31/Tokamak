@@ -76,4 +76,22 @@ extension App {
     let app = Self()
     _launch(app, with: Self._configuration)
   }
+
+  public func _visitChildren<V: ViewVisitor>(_ visitor: V) {
+    print("📱 App._visitChildren called with visitor:", String(describing: type(of: visitor)))
+    // Visit the Scene from the app's body
+    if let sceneVisitor = visitor as? SceneVisitor {
+      print("📱 App found SceneVisitor, about to visit body")
+      print("📱 Body type:", String(describing: type(of: body)))
+      print("📱 Body value:", String(describing: body))
+      do {
+        sceneVisitor.visit(body)
+        print("📱 Successfully visited body")
+      } catch let error {
+        print("❌ Error visiting body:", error)
+      }
+    } else {
+      print("❌ App failed to cast visitor to SceneVisitor:", String(describing: type(of: visitor)))
+    }
+  }
 }

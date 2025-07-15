@@ -18,12 +18,20 @@ import TokamakShim
 @main
 struct TokamakDemoApp: App {
   static let _configuration: _AppConfiguration = .init(
-    reconciler: .stack
+    reconciler: .fiber(useDynamicLayout: true)
   )
+
+  @State private var count = 0
 
   var body: some Scene {
     WindowGroup("Tokamak Demo") {
-      TokamakDemoView()
+      VStack {
+        Text("Count: \(count)")
+        Button("Increment") {
+          count += 1
+        }
+        Text("Hello, Tokamak!")
+      }
     }
   }
 }

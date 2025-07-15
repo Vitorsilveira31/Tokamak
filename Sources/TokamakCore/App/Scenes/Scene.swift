@@ -52,6 +52,7 @@ protocol GroupScene: ParentScene {}
 
 public protocol SceneDeferredToRenderer {
   var deferredBody: AnyView { get }
+  var title: Text? { get }
 }
 
 extension Never: Scene {}

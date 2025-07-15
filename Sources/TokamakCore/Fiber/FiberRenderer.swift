@@ -105,7 +105,6 @@ extension FiberRenderer {
 
   @MainActor
   func viewVisitor<V: View, Visitor: ViewVisitor>(for view: V) -> ViewVisitorF<Visitor> {
-    print("Olha viewVisitor", view, view.body)
     if Self.isPrimitive(view) {
       return { (visitor: Visitor) in
         // if let visitorF = visitPrimitiveChildren(view) {
@@ -143,7 +142,8 @@ extension EnvironmentValues {
     }
   }
 
-  var measureText: (Text, ProposedViewSize, EnvironmentValues) -> CGSize {
+  @_spi(TokamakCore)
+  public var measureText: (Text, ProposedViewSize, EnvironmentValues) -> CGSize {
     get { self[MeasureTextKey.self] }
     set { self[MeasureTextKey.self] = newValue }
   }
