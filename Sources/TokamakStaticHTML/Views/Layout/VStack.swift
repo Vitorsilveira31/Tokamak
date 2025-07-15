@@ -41,7 +41,7 @@ extension VStack: @MainActor _HTMLPrimitive, SpacerContainer {
         "div",
         [
           "style": """
-          justify-items: \(alignment.cssValue);
+          align-items: \(alignment.cssValue);
           \(hasSpacer ? "height: 100%;" : "")
           \(fillCrossAxis ? "width: 100%;" : "")
           \(spacing != defaultStackSpacing ? "--tokamak-stack-gap: \(spacing)px;" : "")

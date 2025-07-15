@@ -68,8 +68,9 @@ struct TokamakDemoView: View {
     title(
       List {
         Image("logo-header.png", label: "Tokamak Demo")
+          .resizable()
           .frame(height: 50)
-          .padding(.bottom, 20)
+          .padding(.bottom, 100)
         Section(header: Text("Buttons")) {
           NavItem(
             "Counter",

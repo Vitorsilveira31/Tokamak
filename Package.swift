@@ -28,14 +28,6 @@ let package = Package(
       targets: ["TokamakStaticHTMLDemo"],
     ),
     .library(
-      name: "TokamakGTK",
-      targets: ["TokamakGTK"]
-    ),
-    .executable(
-      name: "TokamakGTKDemo",
-      targets: ["TokamakGTKDemo"]
-    ),
-    .library(
       name: "TokamakShim",
       targets: ["TokamakShim"]
     ),
@@ -119,43 +111,6 @@ let package = Package(
       swiftSettings: [
         .defaultIsolation(MainActor.self)
       ]
-    ),
-    .systemLibrary(
-      name: "CGTK",
-      pkgConfig: "gtk+-3.0",
-      providers: [
-        .apt(["libgtk+-3.0", "gtk+-3.0"]),
-        // .yum(["gtk3-devel"]),
-        .brew(["gtk+3"]),
-      ]
-    ),
-    .systemLibrary(
-      name: "CGDK",
-      pkgConfig: "gdk-3.0",
-      providers: [
-        .apt(["libgtk+-3.0", "gtk+-3.0"]),
-        // .yum(["gtk3-devel"]),
-        .brew(["gtk+3"]),
-      ]
-    ),
-    .target(
-      name: "TokamakGTKCHelpers",
-      dependencies: ["CGTK"]
-    ),
-    .target(
-      name: "TokamakGTK",
-      dependencies: [
-        "TokamakCore", "CGTK", "CGDK", "TokamakGTKCHelpers",
-        .product(
-          name: "OpenCombineShim",
-          package: "OpenCombine"
-        ),
-      ]
-    ),
-    .executableTarget(
-      name: "TokamakGTKDemo",
-      dependencies: ["TokamakGTK"],
-      resources: [.copy("logo-header.png")]
     ),
     .target(
       name: "TokamakStaticHTML",

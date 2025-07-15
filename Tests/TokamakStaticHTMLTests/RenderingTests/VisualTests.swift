@@ -151,7 +151,7 @@
             Color.clear
               .background(Material.ultraThick)
           }
-        },
+        }.frame(width: 100, height: 100),
         as: .image(size: .init(width: 100, height: 100)),
         timeout: defaultSnapshotTimeout
       )

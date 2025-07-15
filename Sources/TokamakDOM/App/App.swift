@@ -22,12 +22,7 @@ import TokamakStaticHTML
 
 extension App {
   public static func _launch(_ app: Self, with configuration: _AppConfiguration) {
-    switch configuration.reconciler {
-    case .stack:
-      _launch(app, configuration.rootEnvironment, TokamakDOM.body)
-    case .fiber(let useDynamicLayout):
-      DOMFiberRenderer("body", useDynamicLayout: useDynamicLayout).render(app)
-    }
+    _launch(app, configuration.rootEnvironment, TokamakDOM.body)
   }
 
   /// The default implementation of `launch` for a `TokamakDOM` app.

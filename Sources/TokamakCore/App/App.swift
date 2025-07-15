@@ -49,23 +49,13 @@ public protocol App: _TitledApp {
 }
 
 public struct _AppConfiguration: Sendable {
-  public let reconciler: Reconciler
   public let rootEnvironment: EnvironmentValues
 
   @MainActor
   public init(
-    reconciler: Reconciler = .stack,
     rootEnvironment: EnvironmentValues = .init()
   ) {
-    self.reconciler = reconciler
     self.rootEnvironment = rootEnvironment
-  }
-
-  public enum Reconciler: Sendable {
-    /// Use the `StackReconciler`.
-    case stack
-    /// Use the `FiberReconciler` with layout steps optionally enabled.
-    case fiber(useDynamicLayout: Bool = false)
   }
 }
 
@@ -81,13 +71,12 @@ extension App {
     print("📱 App._visitChildren called with visitor:", String(describing: type(of: visitor)))
     // Visit the Scene from the app's body
     if let sceneVisitor = visitor as? SceneVisitor {
-      print("📱 App found SceneVisitor, about to visit body")
-      print("📱 Body type:", String(describing: type(of: body)))
-      print("📱 Body value:", String(describing: body))
+      print("📱 App found SceneVisitor, body type:", String(describing: type(of: self.body)))
       do {
+        print("📱 About to visit body")
         sceneVisitor.visit(body)
         print("📱 Successfully visited body")
-      } catch let error {
+      } catch {
         print("❌ Error visiting body:", error)
       }
     } else {
