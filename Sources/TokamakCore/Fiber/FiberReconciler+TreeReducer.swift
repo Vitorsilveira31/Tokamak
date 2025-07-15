@@ -23,47 +23,57 @@ extension FiberReconciler {
     final class Result {
       // For references
       let fiber: Fiber?
-      let visitChildren: (TreeReducer.SceneVisitor) -> ()
+      let visitChildren: (TreeReducer.SceneVisitor) -> Void
       unowned var parent: Result?
       var child: Result?
       var sibling: Result?
-      var newContent: Renderer.ElementType.Content?
-      var elementIndices: [ObjectIdentifier: Int]
       var nextTraits: _ViewTraitStore
 
       // For reducing
       var lastSibling: Result?
-      var nextExisting: Fiber?
-      var nextExistingAlternate: Fiber?
+      var processedChildCount: Int
+      var unclaimedCurrentChildren: [Int: Fiber]
+
+      // Side-effects
+      var didInsert: Bool
+      var newContent: Renderer.ElementType.Content?
 
       init(
         fiber: Fiber?,
-        visitChildren: @escaping (TreeReducer.SceneVisitor) -> (),
+        currentChildren: [Int: Fiber],
+        visitChildren: @escaping (TreeReducer.SceneVisitor) -> Void,
         parent: Result?,
-        child: Fiber?,
-        alternateChild: Fiber?,
         newContent: Renderer.ElementType.Content? = nil,
-        elementIndices: [ObjectIdentifier: Int],
         nextTraits: _ViewTraitStore
       ) {
         self.fiber = fiber
         self.visitChildren = visitChildren
         self.parent = parent
-        nextExisting = child
-        nextExistingAlternate = alternateChild
-        self.newContent = newContent
-        self.elementIndices = elementIndices
         self.nextTraits = nextTraits
+
+        processedChildCount = 0
+        unclaimedCurrentChildren = currentChildren
+
+        didInsert = false
+        self.newContent = nil
       }
     }
 
     static func reduce<S>(into partialResult: inout Result, nextScene: S) where S: Scene {
-      Self.reduce(
+      print("🌳 TreeReducer.reduce Scene:", String(describing: type(of: nextScene)))
+      print("🌳 Result initial state:")
+      print("  - Has fiber:", partialResult.fiber != nil)
+      print("  - Has parent:", partialResult.parent != nil)
+      print("  - Current children count:", partialResult.processedChildCount)
+
+      reduce(
         into: &partialResult,
         nextValue: nextScene,
         createFiber: { scene, element, parent, elementParent, preferenceParent, _, _, reconciler in
-          Fiber(
-            &scene,
+          print("🌳 Creating Scene Fiber for:", String(describing: type(of: scene)))
+          var mutableScene = scene
+          return Fiber(
+            &mutableScene,
             element: element,
             parent: parent,
             elementParent: elementParent,
@@ -73,20 +83,46 @@ extension FiberReconciler {
           )
         },
         update: { fiber, scene, _, _ in
-          fiber.update(with: &scene)
+          print("🌳 Updating Scene Fiber for:", String(describing: type(of: scene)))
+          var mutableScene = scene
+          return fiber.update(with: &mutableScene)
         },
-        visitChildren: { $1._visitChildren }
+        visitChildren: { reconciler, scene in
+          { visitor in
+            print("🌳 Setting up Scene visitChildren for:", String(describing: type(of: scene)))
+            if let windowGroup = scene as? (any Scene & ParentView) {
+              print("🌳 Found WindowGroup-like scene with children")
+              print("🌳 Visiting scene children directly")
+              for child in windowGroup.children {
+                visitor.visit(child)
+              }
+            } else {
+              print("🌳 Regular scene visit")
+              scene._visitChildren(visitor)
+            }
+            print("🌳 Scene children visit completed")
+          }
+        },
+        isPrimitive: { value in
+          if let view = value as? any View {
+            let isPrim = Renderer.isPrimitive(view)
+            print("🌳 View primitive check:", String(describing: type(of: view)), "=", isPrim)
+            return isPrim
+          }
+          return false
+        }
       )
+      print("🌳 TreeReducer.reduce Scene completed")
     }
 
     static func reduce<V>(into partialResult: inout Result, nextView: V) where V: View {
-      Self.reduce(
+      reduce(
         into: &partialResult,
         nextValue: nextView,
         createFiber: {
           view, element,
-            parent, elementParent, preferenceParent, elementIndex,
-            traits, reconciler in
+          parent, elementParent, preferenceParent, elementIndex,
+          traits, reconciler in
           Fiber(
             &view,
             element: element,
@@ -106,7 +142,12 @@ extension FiberReconciler {
           )
         },
         visitChildren: { reconciler, view in
-          reconciler?.renderer.viewVisitor(for: view) ?? view._visitChildren
+          // Always use _visitChildren for traversal
+          // This handles both primitive and non-primitive views correctly
+          return view._visitChildren
+        },
+        isPrimitive: { view in
+          Renderer.isPrimitive(view)
         }
       )
     }
@@ -125,78 +166,71 @@ extension FiberReconciler {
         FiberReconciler?
       ) -> Fiber,
       update: (Fiber, inout T, Int?, _ViewTraitStore) -> Renderer.ElementType.Content?,
-      visitChildren: (FiberReconciler?, T) -> (TreeReducer.SceneVisitor) -> ()
+      visitChildren: (FiberReconciler?, T) -> (TreeReducer.SceneVisitor) -> Void,
+      isPrimitive: (T) -> Bool
     ) {
       // Create the node and its element.
       var nextValue = nextValue
 
+      let explicitId = (nextValue as? _AnyIDView)?.anyId
+      let childIndex = partialResult.processedChildCount
+
       let resultChild: Result
-      if let existing = partialResult.nextExisting {
-        // If a fiber already exists, simply update it with the new view.
-        let key: ObjectIdentifier?
-        if let elementParent = existing.elementParent {
-          key = ObjectIdentifier(elementParent)
-        } else {
-          key = nil
-        }
-        let newContent = update(
-          existing,
-          &nextValue,
-          key.map { partialResult.elementIndices[$0, default: 0] },
-          partialResult.nextTraits
-        )
+      if let existing = partialResult.unclaimedCurrentChildren[childIndex],
+        existing.typeInfo?.type == typeInfo(of: T.self)?.type,
+        existing.explicitId == explicitId
+      {
+        partialResult.unclaimedCurrentChildren.removeValue(forKey: childIndex)
+        existing.sibling = nil
+        let traits = isPrimitive(nextValue) ? .init() : partialResult.nextTraits
+        let c = update(existing, &nextValue, nil, traits)
         resultChild = Result(
           fiber: existing,
+          currentChildren: existing.mappedChildren,
           visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
           parent: partialResult,
-          child: existing.child,
-          alternateChild: existing.alternate?.child,
-          newContent: newContent,
-          elementIndices: partialResult.elementIndices,
-          nextTraits: existing.element != nil ? .init() : partialResult.nextTraits
+          nextTraits: traits
         )
-        partialResult.nextExisting = existing.sibling
-        partialResult.nextExistingAlternate = partialResult.nextExistingAlternate?.sibling
+        resultChild.newContent = c
       } else {
-        let elementParent = partialResult.fiber?.element != nil
+        let elementParent =
+          partialResult.fiber?.element != nil
           ? partialResult.fiber
           : partialResult.fiber?.elementParent
-        let preferenceParent = partialResult.fiber?.preferences != nil
+        let preferenceParent =
+          partialResult.fiber?.preferences != nil
           ? partialResult.fiber
           : partialResult.fiber?.preferenceParent
-        let key: ObjectIdentifier?
-        if let elementParent = elementParent {
-          key = ObjectIdentifier(elementParent)
-        } else {
-          key = nil
-        }
-        // Otherwise, create a new fiber for this child.
         let fiber = createFiber(
           &nextValue,
-          partialResult.nextExistingAlternate?.element,
+          nil,
           partialResult.fiber,
           elementParent,
           preferenceParent,
-          key.map { partialResult.elementIndices[$0, default: 0] },
+          nil,
           partialResult.nextTraits,
           partialResult.fiber?.reconciler
         )
-
-        // If a fiber already exists for an alternate, link them.
-        if let alternate = partialResult.nextExistingAlternate {
-          fiber.alternate = alternate
-          partialResult.nextExistingAlternate = alternate.sibling
+        let traits: _ViewTraitStore
+        if isPrimitive(nextValue) {
+          traits = .init()
+        } else {
+          traits = partialResult.nextTraits
         }
+
         resultChild = Result(
           fiber: fiber,
+          currentChildren: [:],
           visitChildren: visitChildren(partialResult.fiber?.reconciler, nextValue),
           parent: partialResult,
-          child: nil,
-          alternateChild: fiber.alternate?.child,
-          elementIndices: partialResult.elementIndices,
-          nextTraits: fiber.element != nil ? .init() : partialResult.nextTraits
+          nextTraits: traits
         )
+
+        resultChild.didInsert = true
       }
+
+      partialResult.processedChildCount += 1
+
       // Get the last child element we've processed, and add the new child as its sibling.
       if let lastSibling = partialResult.lastSibling {
         lastSibling.fiber?.sibling = resultChild.fiber

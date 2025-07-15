@@ -23,8 +23,9 @@ public struct ViewInputs<V> {
 
   /// Mutate the underlying content with the given inputs.
   ///
-  /// Used to inject values such as environment values, traits, and preferences into the `View` type.
-  public let updateContent: ((inout V) -> ()) -> ()
+  /// Used to inject values such as environment values, traits, and preferences into the `View`
+  /// type.
+  public let updateContent: ((inout V) -> Void) -> Void
 
   @_spi(TokamakCore)
   public let environment: EnvironmentBox
@@ -45,7 +46,7 @@ public struct ViewOutputs {
   /// An action to perform after all preferences values have been reduced.
   ///
   /// Called when walking back up the tree in the `ReconcilePass`.
-  let preferenceAction: ((_PreferenceStore) -> ())?
+  let preferenceAction: ((_PreferenceStore) -> Void)?
 
   let traits: _ViewTraitStore?
 }
@@ -59,12 +60,12 @@ public final class EnvironmentBox {
   }
 }
 
-public extension ViewOutputs {
-  init<V>(
+extension ViewOutputs {
+  public init<V>(
     inputs: ViewInputs<V>,
     environment: EnvironmentValues? = nil,
     preferenceStore: _PreferenceStore? = nil,
-    preferenceAction: ((_PreferenceStore) -> ())? = nil,
+    preferenceAction: ((_PreferenceStore) -> Void)? = nil,
     traits: _ViewTraitStore? = nil
   ) {
     // Only replace the `EnvironmentBox` when we change the environment.
@@ -76,26 +77,27 @@ public extension ViewOutputs {
   }
 }
 
-public extension View {
+extension View {
   // By default, we simply pass the inputs through without modifications
   // or layout considerations.
-  static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
+  public static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
     .init(inputs: inputs)
   }
 }
 
-public extension ModifiedContent where Content: View, Modifier: ViewModifier {
-  static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
-    Modifier._makeView(.init(
-      content: inputs.content.modifier,
-      updateContent: { _ in },
-      environment: inputs.environment,
-      traits: inputs.traits,
-      preferenceStore: inputs.preferenceStore
-    ))
+extension ModifiedContent where Content: View, Modifier: ViewModifier {
+  public static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
+    Modifier._makeView(
+      .init(
+        content: inputs.content.modifier,
+        updateContent: { _ in },
+        environment: inputs.environment,
+        traits: inputs.traits,
+        preferenceStore: inputs.preferenceStore
+      ))
   }
 
-  func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {
+  public func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {
     modifier._visitChildren(visitor, content: .init(modifier: modifier, view: content))
   }
 }

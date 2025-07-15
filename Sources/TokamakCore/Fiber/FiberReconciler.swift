@@ -20,6 +20,7 @@ import OpenCombineShim
 
 /// A reconciler modeled after React's
 /// [Fiber reconciler](https://reactjs.org/docs/faq-internals.html#what-is-react-fiber)
+@MainActor
 public final class FiberReconciler<Renderer: FiberRenderer> {
   /// The root node in the `Fiber` tree that represents the `View`s currently rendered on screen.
   @_spi(TokamakCore)
@@ -41,7 +42,6 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
 
   private var sceneSizeCancellable: AnyCancellable?
 
-  private var isReconciling = false
   /// The identifiers for each `Fiber` that changed state during the last run loop.
   ///
   /// The reconciler loop starts at the root of the `View` hierarchy
@@ -49,8 +49,8 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   /// To help mitigate performance issues related to this, we only perform reconcile
   /// checks when we reach a changed `Fiber`.
   private var changedFibers = Set<ObjectIdentifier>()
-  public var afterReconcileActions = [() -> ()]()
 
+  @MainActor
   struct RootView<Content: View>: View {
     let content: Content
     let reconciler: FiberReconciler<Renderer>
@@ -59,7 +59,6 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
       var environment = reconciler.renderer.defaultEnvironment
       environment.measureText = reconciler.renderer.measureText
       environment.measureImage = reconciler.renderer.measureImage
-      environment.afterReconcile = reconciler.afterReconcile
       return environment
     }
 
@@ -69,12 +68,16 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
           .environmentValues(environment)
       }
     }
+
+    static func _makeView(_ inputs: ViewInputs<Self>) -> ViewOutputs {
+      .init(inputs: inputs, preferenceStore: inputs.preferenceStore ?? .init())
+    }
   }
 
   /// The `Layout` container for the root of a `View` hierarchy.
   ///
   /// Simply places each `View` in the center of its bounds.
-  struct RootLayout: Layout {
+  struct RootLayout: @MainActor Layout {
     let renderer: Renderer
 
     func sizeThatFits(
@@ -140,7 +143,6 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
     var environment = renderer.defaultEnvironment
     environment.measureText = renderer.measureText
     environment.measureImage = renderer.measureImage
-    environment.afterReconcile = afterReconcile
     var app = app
     current = .init(
       &app,
@@ -158,52 +160,78 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   }
 
   /// A visitor that performs each pass used by the `FiberReconciler`.
-  final class ReconcilerVisitor: AppVisitor, SceneVisitor, ViewVisitor {
+  @MainActor final class ReconcilerVisitor: @MainActor AppVisitor, SceneVisitor, ViewVisitor {
     let root: Fiber
-    /// Any `Fiber`s that changed state during the last run loop.
     let changedFibers: Set<ObjectIdentifier>
     unowned let reconciler: FiberReconciler
     var mutations = [Mutation<Renderer>]()
 
     init(root: Fiber, changedFibers: Set<ObjectIdentifier>, reconciler: FiberReconciler) {
+      print("🟣 Creating ReconcilerVisitor")
       self.root = root
       self.changedFibers = changedFibers
       self.reconciler = reconciler
     }
 
     func visit<A>(_ app: A) where A: App {
-      visitAny(app) { $0.visit(app.body) }
+      print("🟦 Visiting App:", String(describing: type(of: app)))
+      visitAny(app) { vis in
+        print("🟦 App visitor type:", String(describing: type(of: vis)))
+        // Since the cast always succeeds, we can directly use it
+        print("🟦 About to visit App children with SceneVisitor")
+        app._visitChildren(vis)
+      }
     }
 
     func visit<S>(_ scene: S) where S: Scene {
-      visitAny(scene, scene._visitChildren)
+      print("🟨 Visiting Scene:", String(describing: type(of: scene)))
+      visitAny(scene) { vis in
+        print("🟨 Scene visitor type:", String(describing: type(of: vis)))
+        print("🟨 About to visit Scene children")
+        scene._visitChildren(vis)
+      }
     }
 
     func visit<V>(_ view: V) where V: View {
-      visitAny(view, reconciler.renderer.viewVisitor(for: view))
+      print("🟩 Visiting View:", String(describing: type(of: view)))
+      print("🟩 View type info - isPrimitive:", view is any _PrimitiveView)
+      visitAny(view) { vis in
+        print("🟩 View visitor type:", String(describing: type(of: vis)))
+        print("🟩 About to visit View children")
+        view._visitChildren(vis)
+      }
     }
 
     private func visitAny(
       _ content: Any,
-      _ visitChildren: @escaping (TreeReducer.SceneVisitor) -> ()
+      _ visitChildren: @escaping @MainActor (TreeReducer.SceneVisitor) -> Void
     ) {
+      print("⚪️ visitAny called with content type:", String(describing: type(of: content)))
       let alternateRoot: Fiber?
       if let alternate = root.alternate {
+        print("⚪️ Using existing alternate root")
         alternateRoot = alternate
       } else {
+        print("⚪️ Creating new alternate root")
         alternateRoot = root.createAndBindAlternate?()
       }
+
+      print("⚪️ Creating TreeReducer.Result")
       let rootResult = TreeReducer.Result(
-        fiber: alternateRoot, // The alternate is the WIP node.
+        fiber: alternateRoot,  // The alternate is the WIP node.
+        currentChildren: root.mappedChildren,
         visitChildren: visitChildren,
         parent: nil,
-        child: alternateRoot?.child,
-        alternateChild: root.child,
-        elementIndices: [:],
+        newContent: nil,
         nextTraits: .init()
       )
+
+      print("⚪️ Clearing caches")
       reconciler.caches.clear()
+
+      print("⚪️ Running passes:", reconciler.passes)
       for pass in reconciler.passes {
+        print("⚪️ Running pass:", String(describing: type(of: pass)))
         pass.run(
           in: reconciler,
           root: rootResult,
@@ -211,17 +239,10 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
           caches: reconciler.caches
         )
       }
+
+      print("⚪️ Setting mutations from caches")
       mutations = reconciler.caches.mutations
     }
-  }
-
-  func afterReconcile(_ action: @escaping () -> ()) {
-    guard isReconciling == true
-    else {
-      action()
-      return
-    }
-    afterReconcileActions.append(action)
   }
 
   /// Called by any `Fiber` that experiences a state change.
@@ -243,22 +264,29 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
   ///
   /// A `reconcile()` call is queued from `fiberChanged` once per run loop.
   func reconcile() {
-    isReconciling = true
+    print("🔄 Reconciling with changedFibers:", changedFibers)
+    print("🔄 Current fiber:", String(describing: current))
+    print("🔄 Alternate fiber:", String(describing: alternate))
+
     let changedFibers = changedFibers
     self.changedFibers.removeAll()
     // Create a list of mutations.
     let visitor = ReconcilerVisitor(root: current, changedFibers: changedFibers, reconciler: self)
     switch current.content {
-    case let .view(_, visit):
+    case .view(_, let visit):
       visit(visitor)
-    case let .scene(_, visit):
+    case .scene(_, let visit):
       visit(visitor)
-    case let .app(_, visit):
+    case .app(_, let visit):
       visit(visitor)
     case .none:
       break
     }
 
+    print("✅ Reconciliation complete - Mutations:", visitor.mutations.count)
+    if let alternate = alternate {
+      print("✅ Alternate fiber:", String(describing: alternate))
+    }
     // Apply mutations to the rendered output.
     renderer.commit(visitor.mutations)
 
@@ -270,21 +298,8 @@ public final class FiberReconciler<Renderer: FiberRenderer> {
     self.alternate = current
     current = alternate
 
-    isReconciling = false
-
-    for action in afterReconcileActions {
-      action()
+    if let preferences = current.preferences {
+      renderer.preferencesChanged(preferences)
     }
-  }
-}
-
-public extension EnvironmentValues {
-  private enum AfterReconcileKey: EnvironmentKey {
-    static let defaultValue: (@escaping () -> ()) -> () = { _ in }
-  }
-
-  var afterReconcile: (@escaping () -> ()) -> () {
-    get { self[AfterReconcileKey.self] }
-    set { self[AfterReconcileKey.self] = newValue }
   }
 }

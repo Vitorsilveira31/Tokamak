@@ -33,18 +33,17 @@ extension EnvironmentValues {
 
     environment.colorScheme = .init(matchMediaDarkScheme: matchMediaDarkScheme)
     environment._defaultAppStorage = LocalStorage.standard
-    _DefaultSceneStorageProvider.default = SessionStorage.standard
+    //_DefaultSceneStorageProvider.default = SessionStorage.standard
 
     return environment
   }
 }
 
-/** `SpacerContainer` is part of TokamakDOM, as not all renderers will handle flexible
- sizing the way browsers do. Their parent element could already know that if a child is
- requesting full width, then it needs to expand.
- */
-private extension AnyView {
-  var axes: [SpacerContainerAxis] {
+/// `SpacerContainer` is part of TokamakDOM, as not all renderers will handle flexible
+/// sizing the way browsers do. Their parent element could already know that if a child is
+/// requesting full width, then it needs to expand.
+extension AnyView {
+  fileprivate var axes: [SpacerContainerAxis] {
     var axes = [SpacerContainerAxis]()
     if let spacerContainer = mapAnyView(self, transform: { (v: SpacerContainer) in v }) {
       if spacerContainer.hasSpacer {
@@ -57,18 +56,18 @@ private extension AnyView {
     return axes
   }
 
-  var fillAxes: [SpacerContainerAxis] {
+  fileprivate var fillAxes: [SpacerContainerAxis] {
     children.flatMap(\.fillAxes) + axes
   }
 }
 
-let global = JSObject.global
-let window = global.window.object!
-let matchMediaDarkScheme = window.matchMedia!("(prefers-color-scheme: dark)").object!
-let log = global.console.object!.log.function!
-let document = global.document.object!
-let body = document.body.object!
-let head = document.head.object!
+@MainActor let global = JSObject.global
+@MainActor let window = global.window.object!
+@MainActor let matchMediaDarkScheme = window.matchMedia!("(prefers-color-scheme: dark)").object!
+@MainActor let log = global.console.object!.log.function!
+@MainActor let document = global.document.object!
+@MainActor let body = document.body.object!
+@MainActor let head = document.head.object!
 
 func appendRootStyle(_ rootNode: JSObject) {
   rootNode.style = .string(rootNodeStyles)
@@ -77,7 +76,7 @@ func appendRootStyle(_ rootNode: JSObject) {
   _ = head.appendChild!(rootStyle)
 }
 
-final class DOMRenderer: Renderer {
+final class DOMRenderer: @MainActor Renderer {
   private var reconciler: StackReconciler<DOMRenderer>?
 
   private let rootRef: JSObject
@@ -130,9 +129,9 @@ final class DOMRenderer: Renderer {
     let transition = _AnyTransitionProxy(host.viewTraits.transition)
       .resolve(in: host.environmentValues)
     var additionalAttributes = [HTMLAttribute: String]()
-    var runTransition: ((DOMNode) -> ())?
+    var runTransition: ((DOMNode) -> Void)?
     if host.viewTraits.canTransition,
-       let animation = transition.insertionAnimation ?? host.transaction.animation
+      let animation = transition.insertionAnimation ?? host.transaction.animation
     {
       // Apply the active insertion modifier on mount.
       additionalAttributes = apply(
@@ -215,7 +214,7 @@ final class DOMRenderer: Renderer {
     let transition = _AnyTransitionProxy(task.host.viewTraits.transition)
       .resolve(in: task.host.environmentValues)
     if task.host.viewTraits.canTransition,
-       let animation = transition.removalAnimation ?? task.host.transaction.animation
+      let animation = transition.removalAnimation ?? task.host.transaction.animation
     {
       // First, apply the identity removal modifier /without/ animation
       // to be in the initial state.

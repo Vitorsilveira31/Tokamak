@@ -72,7 +72,7 @@ public typealias HorizontalAlignment = TokamakCore.HorizontalAlignment
 public typealias VerticalAlignment = TokamakCore.VerticalAlignment
 
 #if !canImport(CoreGraphics)
-public typealias CGAffineTransform = TokamakCore.CGAffineTransform
+  public typealias CGAffineTransform = TokamakCore.CGAffineTransform
 #endif
 
 // MARK: Views
@@ -93,6 +93,9 @@ public typealias Text = TokamakCore.Text
 public typealias VStack = TokamakCore.VStack
 public typealias ZStack = TokamakCore.ZStack
 public typealias Link = TokamakCore.Link
+
+public typealias Grid = TokamakCore.Grid
+public typealias GridRow = TokamakCore.GridRow
 
 // MARK: Special Views
 
@@ -125,8 +128,8 @@ public typealias ViewBuilder = TokamakCore.ViewBuilder
 
 // FIXME: I would put this inside TokamakCore, but for
 // some reason it doesn't get exported with the typealias
-public extension Text {
-  static func + (lhs: Self, rhs: Self) -> Self {
+extension Text {
+  public static func + (lhs: Self, rhs: Self) -> Self {
     _concatenating(lhs: lhs, rhs: rhs)
   }
 }

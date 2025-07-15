@@ -20,9 +20,10 @@ protocol ValueStorage {
 }
 
 protocol WritableValueStorage: ValueStorage {
-  var setter: ((Any, Transaction) -> ())? { get set }
+  var setter: ((Any, Transaction) -> Void)? { get set }
 }
 
+@MainActor
 @propertyWrapper
 public struct State<Value>: DynamicProperty {
   private let initialValue: Value
@@ -30,9 +31,21 @@ public struct State<Value>: DynamicProperty {
   var anyInitialValue: Any { initialValue }
 
   var getter: (() -> Any)?
-  var setter: ((Any, Transaction) -> ())?
+  var setter: ((Any, Transaction) -> Void)?
 
+  /// Creates a state property that stores an initial value.
+  /// - Parameter value: An initial value to store in the state property.
+  /// - Discussion: You don’t call this initializer directly. Instead, Tokamak calls it for you when
+  /// you declare a property with the @State attribute and provide an initial value:
   public init(wrappedValue value: Value) {
+    initialValue = value
+  }
+
+  /// Creates a state property that stores an initial value.
+  /// - Parameter value: An initial value to store in the state property.
+  /// - Discussion: This initializer has the same behavior as the init(wrappedValue:) initializer.
+  /// See that initializer for more information.
+  public init(initialValue value: Value) {
     initialValue = value
   }
 
@@ -56,9 +69,9 @@ public struct State<Value>: DynamicProperty {
   }
 }
 
-extension State: WritableValueStorage {}
+extension State: @MainActor WritableValueStorage {}
 
-public extension State where Value: ExpressibleByNilLiteral {
+extension State where Value: ExpressibleByNilLiteral {
   @inlinable
-  init() { self.init(wrappedValue: nil) }
+  public init() { self.init(wrappedValue: nil) }
 }

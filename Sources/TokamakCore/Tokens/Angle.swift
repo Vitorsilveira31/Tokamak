@@ -15,7 +15,7 @@
 //  Created by Max Desiatov on 06/28/2020.
 //
 
-public struct Angle: AdditiveArithmetic {
+public struct Angle: AdditiveArithmetic, Sendable {
   public var radians: Double
   public var degrees: Double {
     get { radians * (180.0 / .pi) }
@@ -69,7 +69,7 @@ extension Angle: Hashable, Comparable {
   }
 }
 
-extension Angle: Animatable, _VectorMath {
+extension Angle: @MainActor Animatable, @MainActor _VectorMath {
   public var animatableData: Double {
     get { radians }
     set { radians = newValue }

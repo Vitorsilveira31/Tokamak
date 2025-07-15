@@ -19,18 +19,18 @@ import OpenCombineShim
 
 @propertyWrapper
 public struct EnvironmentObject<ObjectType>: DynamicProperty
-  where ObjectType: ObservableObject
-{
+where ObjectType: ObservableObject {
   @dynamicMemberLookup
   public struct Wrapper {
-    internal let root: ObjectType
+    let root: ObjectType
     public subscript<Subject>(
       dynamicMember keyPath: ReferenceWritableKeyPath<ObjectType, Subject>
     ) -> Binding<Subject> {
       .init(
         get: {
           self.root[keyPath: keyPath]
-        }, set: {
+        },
+        set: {
           self.root[keyPath: keyPath] = $0
         }
       )
@@ -40,7 +40,7 @@ public struct EnvironmentObject<ObjectType>: DynamicProperty
   var _store: ObjectType?
   var _seed: Int = 0
 
-  mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     _store = values[ObjectIdentifier(ObjectType.self)]
   }
 
@@ -65,16 +65,20 @@ public struct EnvironmentObject<ObjectType>: DynamicProperty
   public init() {}
 }
 
-extension EnvironmentObject: ObservedProperty, EnvironmentReader {}
+extension EnvironmentObject: ObservedProperty {}
 
+@_spi(TokamakCore)
+extension EnvironmentObject: _EnvironmentReader {}
+
+@MainActor
 extension ObservableObject {
   static var environmentStore: WritableKeyPath<EnvironmentValues, Self?> {
     \.[ObjectIdentifier(self)]
   }
 }
 
-public extension View {
-  func environmentObject<B>(_ bindable: B) -> some View where B: ObservableObject {
+extension View {
+  public func environmentObject<B>(_ bindable: B) -> some View where B: ObservableObject {
     environment(B.environmentStore, bindable)
   }
 }

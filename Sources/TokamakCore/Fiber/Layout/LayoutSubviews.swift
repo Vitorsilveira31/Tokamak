@@ -18,19 +18,24 @@
 import Foundation
 
 /// A collection of `LayoutSubview` proxies.
-public struct LayoutSubviews: Equatable, RandomAccessCollection {
+@MainActor public struct LayoutSubviews: @MainActor Equatable, @MainActor RandomAccessCollection {
   public var layoutDirection: LayoutDirection
   var storage: [LayoutSubview]
 
-  init(layoutDirection: LayoutDirection, storage: [LayoutSubview]) {
+  @_spi(TokamakCore)
+  public var globalOrigin: CGPoint
+
+  init(layoutDirection: LayoutDirection, storage: [LayoutSubview], globalOrigin: CGPoint) {
     self.layoutDirection = layoutDirection
     self.storage = storage
+    self.globalOrigin = globalOrigin
   }
 
   init<R: FiberRenderer>(_ node: FiberReconciler<R>.Fiber) {
     self.init(
       layoutDirection: node.outputs.environment.environment.layoutDirection,
-      storage: []
+      storage: [],
+      globalOrigin: node.geometry?.origin.globalOrigin ?? .zero
     )
   }
 
@@ -53,7 +58,11 @@ public struct LayoutSubviews: Equatable, RandomAccessCollection {
   }
 
   public subscript(bounds: Range<Int>) -> LayoutSubviews {
-    .init(layoutDirection: layoutDirection, storage: .init(storage[bounds]))
+    .init(
+      layoutDirection: layoutDirection,
+      storage: .init(storage[bounds]),
+      globalOrigin: globalOrigin
+    )
   }
 
   public subscript<S>(indices: S) -> LayoutSubviews where S: Sequence, S.Element == Int {
@@ -61,7 +70,8 @@ public struct LayoutSubviews: Equatable, RandomAccessCollection {
       layoutDirection: layoutDirection,
       storage: storage.enumerated()
         .filter { indices.contains($0.offset) }
-        .map(\.element)
+        .map(\.element),
+      globalOrigin: globalOrigin
     )
   }
 }
@@ -73,12 +83,12 @@ public struct LayoutSubviews: Equatable, RandomAccessCollection {
 ///
 /// `Layout` types are expected to call `place(at:anchor:proposal:)` on all subviews.
 /// If `place(at:anchor:proposal:)` is not called, the center will be used as its position.
-public struct LayoutSubview: Equatable {
+@MainActor public struct LayoutSubview: @MainActor Equatable {
   private let id: ObjectIdentifier
   private let storage: AnyStorage
 
   /// A protocol used to erase `Storage<R>`.
-  private class AnyStorage {
+  @MainActor private class AnyStorage {
     let traits: _ViewTraitStore?
 
     init(traits: _ViewTraitStore?) {
@@ -109,7 +119,8 @@ public struct LayoutSubview: Equatable {
 
   /// The backing storage for a `LayoutSubview`. This contains the underlying implementations for
   /// methods accessing the `fiber`, `element`, and `cache` this subview represents.
-  private final class Storage<R: FiberRenderer>: AnyStorage {
+
+  @MainActor private final class Storage<R: FiberRenderer>: AnyStorage {
     weak var fiber: FiberReconciler<R>.Fiber?
     weak var element: R.ElementType?
     unowned var caches: FiberReconciler<R>.Caches
@@ -165,10 +176,13 @@ public struct LayoutSubview: Equatable {
       guard let fiber = fiber, let element = element else { return }
       let geometry = ViewGeometry(
         // Shift to the anchor point in the parent's coordinate space.
-        origin: .init(origin: .init(
-          x: position.x - (dimensions.width * anchor.x),
-          y: position.y - (dimensions.height * anchor.y)
-        )),
+        origin: .init(
+          parent: fiber.elementParent?.geometry?.origin.globalOrigin ?? .zero,
+          origin: .init(
+            x: position.x - (dimensions.width * anchor.x),
+            y: position.y - (dimensions.height * anchor.y)
+          )
+        ),
         dimensions: dimensions,
         proposal: proposal
       )
@@ -176,6 +190,10 @@ public struct LayoutSubview: Equatable {
       if geometry != fiber.alternate?.geometry {
         caches.mutations.append(.layout(element: element, geometry: geometry))
       }
+      caches.layoutSubviews[
+        ObjectIdentifier(fiber),
+        default: .init(fiber)
+      ].globalOrigin = geometry.origin.globalOrigin
       // Update ours and our alternate's geometry
       fiber.geometry = geometry
       fiber.alternate?.geometry = geometry

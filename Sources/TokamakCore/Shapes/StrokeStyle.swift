@@ -17,11 +17,7 @@
 
 import Foundation
 
-#if canImport(CoreGraphics)
-import CoreGraphics
-#endif
-
-public struct StrokeStyle: Equatable {
+public struct StrokeStyle: Equatable, Sendable {
   public var lineWidth: CGFloat
   public var lineCap: CGLineCap
   public var lineJoin: CGLineJoin
@@ -46,7 +42,7 @@ public struct StrokeStyle: Equatable {
   }
 }
 
-extension StrokeStyle: Animatable {
+extension StrokeStyle: @MainActor Animatable {
   public var animatableData: AnimatablePair<CGFloat, AnimatablePair<CGFloat, CGFloat>> {
     get {
       .init(lineWidth, .init(miterLimit, dashPhase))

@@ -22,7 +22,8 @@ protocol AnyShapeBox {
   func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
 }
 
-private struct ConcreteAnyShapeBox<Base: Shape>: AnyShapeBox {
+@MainActor
+private struct ConcreteAnyShapeBox<Base: Shape>: @MainActor AnyShapeBox {
   var base: Base
 
   var animatableDataBox: _AnyAnimatableData {
@@ -48,7 +49,7 @@ private struct ConcreteAnyShapeBox<Base: Shape>: AnyShapeBox {
   }
 }
 
-public struct AnyShape: Shape {
+public struct AnyShape: @MainActor Shape {
   var box: AnyShapeBox
 
   private init(_ box: AnyShapeBox) {
@@ -56,20 +57,20 @@ public struct AnyShape: Shape {
   }
 }
 
-public extension AnyShape {
-  init<S: Shape>(_ shape: S) {
+extension AnyShape {
+  public init<S: Shape>(_ shape: S) {
     box = ConcreteAnyShapeBox(base: shape)
   }
 
-  func path(in rect: CGRect) -> Path {
+  public func path(in rect: CGRect) -> Path {
     box.path(in: rect)
   }
 
-  func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
+  public func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
     box.sizeThatFits(proposal)
   }
 
-  var animatableData: _AnyAnimatableData {
+  public var animatableData: _AnyAnimatableData {
     get { box.animatableDataBox }
     set { box.animatableDataBox = newValue }
   }

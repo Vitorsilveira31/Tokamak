@@ -17,21 +17,23 @@
 
 import Foundation
 
-public class _AnyImageProviderBox: AnyTokenBox, Equatable {
-  public struct _Image {
-    public indirect enum Storage {
+public class _AnyImageProviderBox: AnyTokenBox, Equatable, @unchecked Sendable {
+  public struct _Image: Sendable {
+    public indirect enum Storage: Sendable {
       case named(String, bundle: Bundle?)
       case resizable(Storage, capInsets: EdgeInsets, resizingMode: Image.ResizingMode)
     }
 
     public let storage: Storage
-    public let label: Text?
+    public let label: String?  // Text?
 
-    public init(storage: Storage, label: Text?) {
+    public init(storage: Storage, label: String?) {
       self.storage = storage
       self.label = label
     }
   }
+
+  init() {}  // dummy initializer for silencing compiler "Main actor-isolated initializer 'init()' has different actor isolation from nonisolated overridden declaration"
 
   public static func == (lhs: _AnyImageProviderBox, rhs: _AnyImageProviderBox) -> Bool {
     lhs.equals(rhs)
@@ -46,12 +48,12 @@ public class _AnyImageProviderBox: AnyTokenBox, Equatable {
   }
 }
 
-private class NamedImageProvider: _AnyImageProviderBox {
+private class NamedImageProvider: _AnyImageProviderBox, @unchecked Sendable {
   let name: String
   let bundle: Bundle?
-  let label: Text?
+  let label: String?  // Text?
 
-  init(name: String, bundle: Bundle?, label: Text?) {
+  init(name: String, bundle: Bundle?, label: String?) {
     self.name = name
     self.bundle = bundle
     self.label = label
@@ -69,7 +71,7 @@ private class NamedImageProvider: _AnyImageProviderBox {
   }
 }
 
-private class ResizableProvider: _AnyImageProviderBox {
+private class ResizableProvider: _AnyImageProviderBox, @unchecked Sendable {
   let parent: _AnyImageProviderBox
   let capInsets: EdgeInsets
   let resizingMode: Image.ResizingMode
@@ -100,7 +102,7 @@ private class ResizableProvider: _AnyImageProviderBox {
   }
 }
 
-public struct Image: _PrimitiveView, Equatable {
+public struct Image: _PrimitiveView, @MainActor Equatable {
   @_spi(TokamakCore)
   public let provider: _AnyImageProviderBox
 
@@ -120,27 +122,27 @@ public struct Image: _PrimitiveView, Equatable {
   }
 }
 
-public extension Image {
-  init(_ name: String, bundle: Bundle? = nil) {
-    self.init(name, bundle: bundle, label: Text(name))
+extension Image {
+  public init(_ name: String, bundle: Bundle? = nil) {
+    self.init(name, bundle: bundle, label: name)
   }
 
-  init(_ name: String, bundle: Bundle? = nil, label: Text) {
+  public init(_ name: String, bundle: Bundle? = nil, label: String) {
     self.init(NamedImageProvider(name: name, bundle: bundle, label: label))
   }
 
-  init(decorative name: String, bundle: Bundle? = nil) {
+  public init(decorative name: String, bundle: Bundle? = nil) {
     self.init(NamedImageProvider(name: name, bundle: bundle, label: nil))
   }
 }
 
-public extension Image {
-  enum ResizingMode: Hashable {
+extension Image {
+  public enum ResizingMode: Hashable, Sendable {
     case tile
     case stretch
   }
 
-  func resizable(
+  public func resizable(
     capInsets: EdgeInsets = EdgeInsets(),
     resizingMode: ResizingMode = .stretch
   ) -> Image {
@@ -149,7 +151,7 @@ public extension Image {
 }
 
 /// This is a helper type that works around absence of "package private" access control in Swift
-public struct _ImageProxy {
+@MainActor public struct _ImageProxy {
   public let subject: Image
 
   public init(_ subject: Image) { self.subject = subject }
@@ -158,7 +160,7 @@ public struct _ImageProxy {
   public var environment: EnvironmentValues { subject.environment }
 }
 
-extension Image: Layout {
+extension Image: @MainActor Layout {
   public func sizeThatFits(
     proposal: ProposedViewSize,
     subviews: Subviews,

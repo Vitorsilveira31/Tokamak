@@ -18,11 +18,13 @@
 import OpenCombineShim
 
 /// Provides the ability to set the title of the Scene.
+@MainActor
 public protocol _TitledApp {
   static func _setTitle(_ title: String)
 }
 
 /// The renderer is responsible for implementing certain functionality.
+@MainActor
 public protocol App: _TitledApp {
   associatedtype Body: Scene
   var body: Body { get }
@@ -46,31 +48,39 @@ public protocol App: _TitledApp {
   init()
 }
 
-public struct _AppConfiguration {
-  public let reconciler: Reconciler
+public struct _AppConfiguration: Sendable {
   public let rootEnvironment: EnvironmentValues
 
+  @MainActor
   public init(
-    reconciler: Reconciler = .stack,
     rootEnvironment: EnvironmentValues = .init()
   ) {
-    self.reconciler = reconciler
     self.rootEnvironment = rootEnvironment
-  }
-
-  public enum Reconciler {
-    /// Use the `StackReconciler`.
-    case stack
-    /// Use the `FiberReconciler` with layout steps optionally enabled.
-    case fiber(useDynamicLayout: Bool = false)
   }
 }
 
-public extension App {
-  static var _configuration: _AppConfiguration { .init() }
+extension App {
+  public static var _configuration: _AppConfiguration { .init() }
 
-  static func main() {
+  public static func main() {
     let app = Self()
     _launch(app, with: Self._configuration)
+  }
+
+  public func _visitChildren<V: ViewVisitor>(_ visitor: V) {
+    print("📱 App._visitChildren called with visitor:", String(describing: type(of: visitor)))
+    // Visit the Scene from the app's body
+    if let sceneVisitor = visitor as? SceneVisitor {
+      print("📱 App found SceneVisitor, body type:", String(describing: type(of: self.body)))
+      do {
+        print("📱 About to visit body")
+        sceneVisitor.visit(body)
+        print("📱 Successfully visited body")
+      } catch {
+        print("❌ Error visiting body:", error)
+      }
+    } else {
+      print("❌ App failed to cast visitor to SceneVisitor:", String(describing: type(of: visitor)))
+    }
   }
 }

@@ -20,12 +20,8 @@ import JavaScriptEventLoop
 import JavaScriptKit
 import OpenCombineJS
 import OpenCombineShim
-
-@_spi(TokamakCore)
-import TokamakCore
-
-@_spi(TokamakStaticHTML)
-import TokamakStaticHTML
+@_spi(TokamakCore) import TokamakCore
+@_spi(TokamakStaticHTML) import TokamakStaticHTML
 
 public final class DOMElement: FiberElement {
   var reference: JSObject?
@@ -57,8 +53,8 @@ public final class DOMElement: FiberElement {
   }
 }
 
-public extension DOMElement.Content {
-  init<V>(from primitiveView: V, useDynamicLayout: Bool) where V: View {
+extension DOMElement.Content {
+  public init<V>(from primitiveView: V, useDynamicLayout: Bool) where V: View {
     guard let primitiveView = primitiveView as? HTMLConvertible else { fatalError() }
     tag = primitiveView.tag
     namespace = primitiveView.namespace
@@ -72,7 +68,7 @@ public extension DOMElement.Content {
     }
 
     debugData = [
-      "view": String(reflecting: V.self),
+      "view": String(reflecting: V.self)
     ]
   }
 }
@@ -93,7 +89,7 @@ public struct DOMFiberRenderer: FiberRenderer {
     var environment = EnvironmentValues()
     environment[_ColorSchemeKey.self] = .light
     environment._defaultAppStorage = LocalStorage.standard
-    _DefaultSceneStorageProvider.default = SessionStorage.standard
+    //_DefaultSceneStorageProvider.default = SessionStorage.standard
     return environment
   }
 
@@ -103,10 +99,11 @@ public struct DOMFiberRenderer: FiberRenderer {
     }
 
     guard let reference = document.querySelector!(rootSelector).object else {
-      fatalError("""
-      The root element with selector '\(rootSelector)' could not be found. \
-      Ensure this element exists in your site's index.html file.
-      """)
+      fatalError(
+        """
+        The root element with selector '\(rootSelector)' could not be found. \
+        Ensure this element exists in your site's index.html file.
+        """)
     }
     rootElement = .init(
       from: .init(
@@ -129,15 +126,16 @@ public struct DOMFiberRenderer: FiberRenderer {
       _ = reference.style.setProperty("position", "relative")
 
       let sceneSizePublisher = CurrentValueSubject<CGSize, Never>(
-        .init(width: body.clientWidth.number!, height: body.clientHeight.number!)
+        CGSize(width: Float(body.clientWidth.number!), height: Float(body.clientHeight.number!))
       )
       sceneSize = sceneSizePublisher
-      resizeObserver = JSObject.global.ResizeObserver.function!.new(JSClosure { _ in
-        sceneSizePublisher.send(
-          .init(width: body.clientWidth.number!, height: body.clientHeight.number!)
-        )
-        return .undefined
-      })
+      resizeObserver = JSObject.global.ResizeObserver.function!.new(
+        JSClosure { _ in
+          sceneSizePublisher.send(
+            CGSize.fromDouble(width: body.clientWidth.number!, height: body.clientHeight.number!)
+          )
+          return .undefined
+        })
       _ = resizeObserver?.observe?(body)
     } else {
       sceneSize = .init(.zero)
@@ -146,11 +144,12 @@ public struct DOMFiberRenderer: FiberRenderer {
       style.innerHTML = .string(TokamakStaticHTML.tokamakStyles)
       _ = document.head.appendChild(style)
     }
+
+    GestureEventsObserver.observe(reference)
   }
 
   public static func isPrimitive<V>(_ view: V) -> Bool where V: View {
-    !(view is AnyOptional) &&
-      (view is HTMLConvertible || view is DOMNodeConvertible)
+    !(view is AnyOptional) && (view is HTMLConvertible || view is DOMNodeConvertible)
   }
 
   public func visitPrimitiveChildren<Primitive, Visitor>(
@@ -186,7 +185,7 @@ public struct DOMFiberRenderer: FiberRenderer {
     }
     _ = document.body.appendChild(element)
     let rect = element.getBoundingClientRect!()
-    let size = CGSize(
+    let size = CGSize.fromDouble(
       width: rect.width.number ?? 0,
       height: rect.height.number ?? 0
     )
@@ -200,7 +199,7 @@ public struct DOMFiberRenderer: FiberRenderer {
 
   private var imageCache = ImageCache()
 
-  private func loadImageSize(src: String, _ onload: @escaping (CGSize) -> ()) {
+  private func loadImageSize(src: String, _ onload: @escaping (CGSize) -> Void) {
     if let cached = imageCache.values[src] {
       return onload(cached)
     }
@@ -208,15 +207,16 @@ public struct DOMFiberRenderer: FiberRenderer {
     let Image = JSObject.global.Image.function!
     let jsImage = Image.new()
     jsImage.src = .string(src)
-    jsImage.onload = JSOneshotClosure { value in
-      let naturalSize = CGSize(
-        width: value[0].target.object!.naturalWidth.number!,
-        height: value[0].target.object!.naturalHeight.number!
-      )
-      imageCache.values[src] = naturalSize
-      onload(naturalSize)
-      return .undefined
-    }.jsValue
+    jsImage.onload =
+      JSOneshotClosure { value in
+        let naturalSize = CGSize.fromDouble(
+          width: value[0].target.object!.naturalWidth.number!,
+          height: value[0].target.object!.naturalHeight.number!
+        )
+        imageCache.values[src] = naturalSize
+        onload(naturalSize)
+        return .undefined
+      }.jsValue
   }
 
   public func measureImage(
@@ -225,17 +225,15 @@ public struct DOMFiberRenderer: FiberRenderer {
     in environment: EnvironmentValues
   ) -> CGSize {
     switch image.provider.resolve(in: environment).storage {
-    case let .named(name, bundle):
+    case .named(let name, let bundle):
       loadImageSize(
         src: bundle?
           .path(forResource: name, ofType: nil) ?? name
       ) { naturalSize in
-        environment.afterReconcile {
-          image._intrinsicSize = naturalSize
-        }
+        image._intrinsicSize = naturalSize
       }
       return .zero
-    case let .resizable(.named(name, bundle: bundle), _, _):
+    case .resizable(.named(let name, bundle: let bundle), _, _):
       if proposal == .unspecified {
         if let intrinsicSize = image._intrinsicSize {
           return intrinsicSize
@@ -244,9 +242,7 @@ public struct DOMFiberRenderer: FiberRenderer {
           src: bundle?
             .path(forResource: name, ofType: nil) ?? name
         ) { naturalSize in
-          environment.afterReconcile {
-            image._intrinsicSize = naturalSize
-          }
+          image._intrinsicSize = naturalSize
         }
         return .zero
       }
@@ -268,15 +264,17 @@ public struct DOMFiberRenderer: FiberRenderer {
       element.innerHTML = .string(innerHTML)
     }
     for (event, action) in content.listeners {
-      _ = element.addEventListener?(event, JSClosure {
-        action($0[0].object!)
-        return .undefined
-      })
+      _ = element.addEventListener?(
+        event,
+        JSClosure {
+          action($0[0].object!)
+          return .undefined
+        })
     }
     #if DEBUG
-    for (key, value) in content.debugData {
-      element.dataset.object?[dynamicMember: key] = value.jsValue
-    }
+      for (key, value) in content.debugData {
+        element.dataset.object?[dynamicMember: key] = value.jsValue
+      }
     #endif
   }
 
@@ -292,7 +290,7 @@ public struct DOMFiberRenderer: FiberRenderer {
   public func commit(_ mutations: [Mutation<Self>]) {
     for mutation in mutations {
       switch mutation {
-      case let .insert(newElement, parent, index):
+      case .insert(let newElement, let parent, let index):
         let element = createElement(newElement)
         guard let parentElement = parent.reference ?? rootElement.reference
         else { fatalError("The root element was not bound (trying to insert element).") }
@@ -301,17 +299,9 @@ public struct DOMFiberRenderer: FiberRenderer {
         } else {
           _ = parentElement.appendChild?(element)
         }
-      case let .remove(element, _):
+      case .remove(let element, _):
         _ = element.reference?.remove?()
-      case let .replace(parent, previous, replacement):
-        guard let parentElement = parent.reference ?? rootElement.reference
-        else { fatalError("The root element was not bound (trying to replace element).") }
-        guard let previousElement = previous.reference else {
-          fatalError("The previous element does not exist (trying to replace element).")
-        }
-        let replacementElement = createElement(replacement)
-        _ = parentElement.replaceChild?(replacementElement, previousElement)
-      case let .update(previous, newContent, geometry):
+      case .update(let previous, let newContent, let geometry):
         previous.update(with: newContent)
         guard let previousElement = previous.reference
         else { fatalError("The element does not exist (trying to update element).") }
@@ -319,7 +309,7 @@ public struct DOMFiberRenderer: FiberRenderer {
         // Re-apply geometry as style changes could've overwritten it.
         apply(geometry, to: previousElement)
         previous.reference = previousElement
-      case let .layout(element, geometry):
+      case .layout(let element, let geometry):
         guard let element = element.reference else {
           fatalError("The element does not exist (trying to layout).")
         }
@@ -328,13 +318,45 @@ public struct DOMFiberRenderer: FiberRenderer {
     }
   }
 
+  final class Head {
+    let head = document.head.object!
+    var metaTags = [JSObject]()
+    var title: JSObject?
+  }
+
+  private let head = Head()
+  public func preferencesChanged(_ preferenceStore: _PreferenceStore) {
+    if let newMetaTags = preferenceStore.newValue(forKey: HTMLMetaPreferenceKey.self) {
+      for oldTag in head.metaTags {
+        _ = head.head.removeChild!(oldTag)
+      }
+      head.metaTags = newMetaTags.map {
+        let template = document.createElement!("template").object!
+        template.innerHTML = .string($0.outerHTML())
+        let meta = template.content.firstChild.object!
+        _ = head.head.appendChild!(meta)
+        return meta
+      }
+    }
+    if let newTitle = preferenceStore.newValue(forKey: HTMLTitlePreferenceKey.self) {
+      if let title = head.title {
+        title.innerHTML = .string(newTitle)
+      } else {
+        let node = document.createElement!("title").object!
+        _ = head.head.appendChild!(node)
+        node.innerHTML = .string(newTitle)
+        head.title = node
+      }
+    }
+  }
+
   private let scheduler = JSScheduler()
-  public func schedule(_ action: @escaping () -> ()) {
+  public func schedule(_ action: @escaping () -> Void) {
     scheduler.schedule(options: nil, action)
   }
 }
 
-extension _PrimitiveButtonStyleBody: DOMNodeConvertible {
+extension _PrimitiveButtonStyleBody: @MainActor DOMNodeConvertible {
   public var tag: String { "button" }
   public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
     [:]

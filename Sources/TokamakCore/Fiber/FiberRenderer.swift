@@ -64,7 +64,8 @@ public protocol FiberRenderer {
 
   /// Run `action` on the next run loop.
   ///
-  /// Called by the `FiberReconciler` to perform reconciliation after all changed Fibers are collected.
+  /// Called by the `FiberReconciler` to perform reconciliation after all changed Fibers are
+  /// collected.
   ///
   /// For example, take the following sample `View`:
   ///
@@ -87,35 +88,49 @@ public protocol FiberRenderer {
   /// Instead, we create a list of changed fibers
   /// (in this case just `DuelOfTheStates` as both properties were on it),
   /// and reconcile after all changes have been collected.
-  func schedule(_ action: @escaping () -> ())
+  func schedule(_ action: @escaping () -> Void)
+
+  /// Called by the reconciler when the preferences of the topmost `Fiber` changed.
+  func preferencesChanged(_ preferenceStore: _PreferenceStore)
 }
 
-public extension FiberRenderer {
-  var defaultEnvironment: EnvironmentValues { .init() }
+extension FiberRenderer {
+  public var defaultEnvironment: EnvironmentValues { .init() }
 
-  func visitPrimitiveChildren<Primitive, Visitor>(
+  public func visitPrimitiveChildren<Primitive, Visitor>(
     _ view: Primitive
   ) -> ViewVisitorF<Visitor>? where Primitive: View, Visitor: ViewVisitor {
     nil
   }
 
+  @MainActor
   func viewVisitor<V: View, Visitor: ViewVisitor>(for view: V) -> ViewVisitorF<Visitor> {
     if Self.isPrimitive(view) {
-      return visitPrimitiveChildren(view) ?? view._visitChildren
+      return { (visitor: Visitor) in
+        // if let visitorF = visitPrimitiveChildren(view) {
+        //   visitorF(visitor)
+        // }
+        view._visitChildren(visitor)
+      }
     } else {
-      return view._visitChildren
+      return { (visitor: Visitor) in
+        view._visitChildren(visitor)
+      }
     }
   }
 
-  @discardableResult
-  @_disfavoredOverload
-  func render<V: View>(_ view: V) -> FiberReconciler<Self> {
-    .init(self, view)
-  }
+  func preferencesChanged(_ preferenceStore: _PreferenceStore) {}
 
   @discardableResult
   @_disfavoredOverload
-  func render<A: App>(_ app: A) -> FiberReconciler<Self> {
+  public func render<V: View>(_ view: V) -> FiberReconciler<Self> {
+    .init(self, view)
+  }
+
+  @MainActor
+  @discardableResult
+  @_disfavoredOverload
+  public func render<A: App>(_ app: A) -> FiberReconciler<Self> {
     .init(self, app)
   }
 }
@@ -127,7 +142,8 @@ extension EnvironmentValues {
     }
   }
 
-  var measureText: (Text, ProposedViewSize, EnvironmentValues) -> CGSize {
+  @_spi(TokamakCore)
+  public var measureText: (Text, ProposedViewSize, EnvironmentValues) -> CGSize {
     get { self[MeasureTextKey.self] }
     set { self[MeasureTextKey.self] = newValue }
   }

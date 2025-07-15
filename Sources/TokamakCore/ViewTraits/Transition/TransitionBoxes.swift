@@ -17,9 +17,11 @@
 
 import Foundation
 
-public class _AnyTransitionBox: AnyTokenBox {
+@MainActor
+public class _AnyTransitionBox: @MainActor AnyTokenBox {
   public typealias ResolvedValue = ResolvedTransition
 
+  @MainActor
   public struct ResolvedTransition {
     public var insertion: [Transition]
     public var removal: [Transition]
@@ -52,6 +54,8 @@ public class _AnyTransitionBox: AnyTokenBox {
       identity: (AnyView) -> AnyView
     )
   }
+
+  init() {}  // dummy initializer for silencing compiler
 
   public func resolve(in environment: EnvironmentValues) -> ResolvedValue {
     fatalError("implement \(#function) in subclass")

@@ -17,23 +17,25 @@
 
 import Foundation
 
-public extension GraphicsContext {
-  struct Filter {
+@MainActor
+extension GraphicsContext {
+  @MainActor public struct Filter {
     public let _storage: _Storage
 
     private init(_ storage: _Storage) {
       _storage = storage
     }
 
+    @MainActor
     public enum _Storage {
       case projectionTransform(ProjectionTransform)
       case shadow(
-        color: Color = Color(.sRGBLinear, white: 0, opacity: 0.33),
+        color: Color?,  //Color(.sRGBLinear, white: 0, opacity: 0.33),
         radius: CGFloat,
         x: CGFloat = 0,
         y: CGFloat = 0,
         blendMode: BlendMode = .normal,
-        options: ShadowOptions = ShadowOptions()
+        options: ShadowOptions?  //= ShadowOptions()
       )
       case colorMultiply(Color)
       case colorMatrix(ColorMatrix)
@@ -46,12 +48,12 @@ public extension GraphicsContext {
       case luminanceToAlpha
       case blur(
         radius: CGFloat,
-        options: BlurOptions = .opaque
+        options: BlurOptions?  //= .opaque
       )
       case alphaThreshold(
         min: Double,
         max: Double = 1,
-        color: Color = Color.black
+        color: Color?  //= Color.black
       )
     }
 
@@ -59,6 +61,7 @@ public extension GraphicsContext {
       .init(.projectionTransform(matrix))
     }
 
+    @MainActor
     public static func shadow(
       color: Color = Color(.sRGBLinear, white: 0, opacity: 0.33),
       radius: CGFloat,
@@ -67,14 +70,15 @@ public extension GraphicsContext {
       blendMode: BlendMode = .normal,
       options: ShadowOptions = ShadowOptions()
     ) -> Self {
-      .init(.shadow(
-        color: color,
-        radius: radius,
-        x: x,
-        y: y,
-        blendMode: blendMode,
-        options: options
-      ))
+      .init(
+        .shadow(
+          color: color,
+          radius: radius,
+          x: x,
+          y: y,
+          blendMode: blendMode,
+          options: options
+        ))
     }
 
     public static func colorMultiply(_ color: Color) -> Self {
@@ -120,6 +124,7 @@ public extension GraphicsContext {
       .init(.blur(radius: radius, options: options))
     }
 
+    @MainActor
     public static func alphaThreshold(
       min: Double,
       max: Double = 1,
@@ -130,7 +135,7 @@ public extension GraphicsContext {
   }
 
   @frozen
-  struct ShadowOptions: OptionSet {
+  public struct ShadowOptions: OptionSet {
     public let rawValue: UInt32
 
     @inlinable
@@ -150,7 +155,7 @@ public extension GraphicsContext {
   }
 
   @frozen
-  struct BlurOptions: OptionSet {
+  public struct BlurOptions: OptionSet {
     public let rawValue: UInt32
 
     @inlinable
@@ -164,7 +169,7 @@ public extension GraphicsContext {
   }
 
   @frozen
-  struct FilterOptions: OptionSet {
+  public struct FilterOptions: OptionSet {
     public let rawValue: UInt32
 
     @inlinable
@@ -174,7 +179,7 @@ public extension GraphicsContext {
     public static var linearColor: Self { Self(rawValue: 1 << 0) }
   }
 
-  mutating func addFilter(
+  public mutating func addFilter(
     _ filter: Filter,
     options: FilterOptions = FilterOptions()
   ) {

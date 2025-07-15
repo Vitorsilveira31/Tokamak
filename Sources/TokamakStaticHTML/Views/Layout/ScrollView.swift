@@ -17,7 +17,7 @@
 
 import TokamakCore
 
-extension ScrollView: _HTMLPrimitive, SpacerContainer {
+extension ScrollView: @MainActor _HTMLPrimitive, SpacerContainer {
   public var axis: SpacerContainerAxis {
     if axes.contains(.horizontal) {
       return .horizontal
@@ -30,19 +30,37 @@ extension ScrollView: _HTMLPrimitive, SpacerContainer {
   public var renderedBody: AnyView {
     let scrollX = axes.contains(.horizontal)
     let scrollY = axes.contains(.vertical)
-    return AnyView(HTML("div", [
+    return AnyView(
+      HTML(
+        "div",
+        [
+          "style": """
+          \(scrollX ? "overflow-x: auto; width: 100%;" : "overflow-x: hidden;")
+          \(scrollY ? "overflow-y: auto; height: 100%;" : "overflow-y: hidden;")
+          \(fillCrossAxis && scrollX ? "height: 100%;" : "")
+          \(fillCrossAxis && scrollY ? "width: 100%;" : "")
+          """,
+          "class": !showsIndicators
+            ? "_tokamak-scrollview _tokamak-scrollview-hideindicators" : "_tokamak-scrollview",
+        ]
+      ) {
+        VStack {
+          content
+        }
+      })
+  }
+}
+
+@_spi(TokamakStaticHTML)
+extension ScrollView: HTMLConvertible {
+  public var tag: String { "div" }
+
+  public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
+    [
       "style": """
-      \(scrollX ? "overflow-x: auto; width: 100%;" : "overflow-x: hidden;")
-      \(scrollY ? "overflow-y: auto; height: 100%;" : "overflow-y: hidden;")
-      \(fillCrossAxis && scrollX ? "height: 100%;" : "")
-      \(fillCrossAxis && scrollY ? "width: 100%;" : "")
-      """,
-      "class": !showsIndicators ? "_tokamak-scrollview _tokamak-scrollview-hideindicators" :
-        "_tokamak-scrollview",
-    ]) {
-      VStack {
-        content
-      }
-    })
+      \(axes.contains(.horizontal) ? "overflow-x: auto; width: 100%;" : "overflow-x: hidden;")
+      \(axes.contains(.vertical) ? "overflow-y: auto; height: 100%;" : "overflow-y: hidden;")
+      """
+    ]
   }
 }

@@ -15,9 +15,9 @@
 import Foundation
 import TokamakCore
 
-public extension Font.Design {
+extension Font.Design {
   /// Some default font stacks for the various designs
-  var families: [String] {
+  public var families: [String] {
     switch self {
     case .default:
       return [
@@ -47,7 +47,7 @@ public extension Font.Design {
         "Courier",
         "monospace",
       ]
-    case .rounded: // Not supported due to browsers not having a rounded font builtin
+    case .rounded:  // Not supported due to browsers not having a rounded font builtin
       return Self.default.families
     case .serif:
       return [
@@ -64,7 +64,7 @@ public extension Font.Design {
   }
 }
 
-extension Font.Leading: CustomStringConvertible {
+extension Font.Leading: @MainActor CustomStringConvertible {
   public var description: String {
     switch self {
     case .standard:
@@ -77,8 +77,10 @@ extension Font.Leading: CustomStringConvertible {
   }
 }
 
-public extension Font {
-  func styles(in environment: EnvironmentValues) -> [String: String] {
+extension Font {
+
+  @MainActor
+  public func styles(in environment: EnvironmentValues) -> [String: String] {
     let proxy = _FontProxy(self).resolve(in: environment)
     return [
       "font-family": families(in: environment).joined(separator: ", "),
@@ -90,23 +92,24 @@ public extension Font {
     ]
   }
 
-  func families(in environment: EnvironmentValues) -> [String] {
+  @MainActor
+  public func families(in environment: EnvironmentValues) -> [String] {
     let proxy = _FontProxy(self).resolve(in: environment)
     switch proxy._name {
     case .system:
       return proxy._design.families
-    case let .custom(custom):
+    case .custom(let custom):
       return [Sanitizers.CSS.sanitize(custom)]
         + environment._fontPath.dropFirst().flatMap { font -> [String] in
           var env = environment
           env._fontPath = []
           return font.families(in: env)
-        } // Fallback
+        }  // Fallback
     }
   }
 }
 
-extension TextAlignment: CustomStringConvertible {
+extension TextAlignment: @MainActor CustomStringConvertible {
   public var description: String {
     switch self {
     case .leading: return "left"
@@ -124,15 +127,16 @@ private struct TextSpan: AnyHTML {
   var tag: String { "span" }
 }
 
-extension Text: AnyHTML {
+extension Text: @MainActor AnyHTML {
   public func innerHTML(shouldSortAttributes: Bool) -> String? {
     let proxy = _TextProxy(self)
     let innerHTML: String
     switch proxy.storage {
-    case let .verbatim(text):
+    case .verbatim(let text):
       innerHTML = proxy.environment.domTextSanitizer(text)
-    case let .segmentedText(segments):
-      innerHTML = segments
+    case .segmentedText(let segments):
+      innerHTML =
+        segments
         .reduce(into: "") {
           $0.append(
             TextSpan(
@@ -146,7 +150,7 @@ extension Text: AnyHTML {
           )
         }
     }
-    return innerHTML.replacingOccurrences(of: "\n", with: "<br />")
+    return innerHTML.replacing("\n", with: "<br />")
   }
 
   public var tag: String { "span" }
@@ -160,7 +164,7 @@ extension Text: AnyHTML {
 }
 
 @_spi(TokamakStaticHTML)
-extension Text: HTMLConvertible {
+extension Text: @MainActor HTMLConvertible {
   @_spi(TokamakStaticHTML)
   public var innerHTML: String? {
     innerHTML(shouldSortAttributes: false)
@@ -189,9 +193,9 @@ extension Text {
     var underline: (Bool, Color?)?
     for modifier in modifiers {
       switch modifier {
-      case let .color(_color):
+      case .color(let _color):
         color = _color
-      case let .font(font):
+      case .font(let font):
         if let font = font {
           fontStack.append(font)
         } else {
@@ -199,45 +203,54 @@ extension Text {
         }
       case .italic:
         italic = true
-      case let .weight(_weight):
+      case .weight(let _weight):
         weight = _weight
-      case let .kerning(_kerning), let .tracking(_kerning):
+      case .kerning(let _kerning), .tracking(let _kerning):
         kerning = "\(_kerning)em"
-      case let .baseline(_baseline):
+      case .baseline(let _baseline):
         baseline = _baseline
       case .rounded: break
-      case let .strikethrough(active, color):
+      case .strikethrough(let active, let color):
         strikethrough = (active, color)
-      case let .underline(active, color):
+      case .underline(let active, let color):
         underline = (active, color)
       }
     }
 
     let hasStrikethrough = strikethrough?.0 ?? false
     let hasUnderline = underline?.0 ?? false
-    let textDecoration = !hasStrikethrough && !hasUnderline ? "none" :
-      "\(hasStrikethrough ? "line-through" : "") \(hasUnderline ? "underline" : "")"
-    let decorationColor = strikethrough?.1?.cssValue(environment)
+    let textDecoration =
+      !hasStrikethrough && !hasUnderline
+      ? "none" : "\(hasStrikethrough ? "line-through" : "") \(hasUnderline ? "underline" : "")"
+    let decorationColor =
+      strikethrough?.1?.cssValue(environment)
       ?? underline?.1?.cssValue(environment)
       ?? "inherit"
 
     var fontPathEnv = environment
-    fontPathEnv._fontPath = fontStack.reversed() + fontPathEnv._fontPath
+    fontPathEnv._fontPath =
+      fontStack.reversed()
+      + fontPathEnv._fontPath
       .filter { !fontStack.contains($0) }
     if fontPathEnv._fontPath.allSatisfy({ _FontProxy($0).provider is _CustomFontBox }) {
       // Add a fallback
       fontPathEnv._fontPath.append(.body)
     }
-    let resolvedFont = fontPathEnv._fontPath
-      .isEmpty ? nil : _FontProxy(fontPathEnv._fontPath.first!).resolve(in: environment)
+    let resolvedFont =
+      fontPathEnv._fontPath
+        .isEmpty ? nil : _FontProxy(fontPathEnv._fontPath.first!).resolve(in: environment)
 
     return [
       "style": """
-      \(fontPathEnv._fontPath.first?.styles(in: fontPathEnv)
-        .filter { weight != nil ? $0.key != "font-weight" : true }
-        .inlineStyles(shouldSortDeclarations: true) ?? "")
-      \(fontPathEnv._fontPath
-        .isEmpty ? "font-family: \(Font.Design.default.families.joined(separator: ", "));" : "")
+      \(
+        fontPathEnv._fontPath.first?.styles(in: fontPathEnv)
+          .filter { weight != nil ? $0.key != "font-weight" : true }
+          .inlineStyles(shouldSortDeclarations: true) ?? ""
+      )
+      \(
+        fontPathEnv._fontPath
+          .isEmpty ? "font-family: \(Font.Design.default.families.joined(separator: ", "));" : ""
+      )
       color: \((color ?? .primary).cssValue(environment));
       font-style: \(italic ? "italic" : "normal");
       font-weight: \(weight?.value ?? resolvedFont?._weight.value ?? 400);

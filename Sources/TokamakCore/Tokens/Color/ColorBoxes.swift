@@ -39,8 +39,8 @@ public protocol AnyColorBoxDeferredToRenderer: AnyColorBox {
   func deferredResolve(in environment: EnvironmentValues) -> AnyColorBox.ResolvedValue
 }
 
-public class AnyColorBox: AnyTokenBox, Hashable {
-  public struct _RGBA: Hashable, Equatable {
+public class AnyColorBox: AnyTokenBox, Hashable, @unchecked Sendable {
+  public struct _RGBA: Hashable, Equatable, Sendable {
     public let red: Double
     public let green: Double
     public let blue: Double
@@ -61,6 +61,8 @@ public class AnyColorBox: AnyTokenBox, Hashable {
     }
   }
 
+  init() {}  // dummy initializer for silencing compiler
+
   public static func == (lhs: AnyColorBox, rhs: AnyColorBox) -> Bool {
     lhs.equals(rhs)
   }
@@ -79,7 +81,7 @@ public class AnyColorBox: AnyTokenBox, Hashable {
   }
 }
 
-public final class _ConcreteColorBox: AnyColorBox {
+public final class _ConcreteColorBox: AnyColorBox, @unchecked Sendable {
   public let rgba: AnyColorBox._RGBA
 
   override public func equals(_ other: AnyColorBox) -> Bool {
@@ -101,8 +103,8 @@ public final class _ConcreteColorBox: AnyColorBox {
   }
 }
 
-public final class _EnvironmentDependentColorBox: AnyColorBox {
-  public let resolver: (EnvironmentValues) -> Color
+public final class _EnvironmentDependentColorBox: AnyColorBox, @unchecked Sendable {
+  public let resolver: @MainActor @Sendable (EnvironmentValues) -> Color
 
   override public func equals(_ other: AnyColorBox) -> Bool {
     guard let other = other as? _EnvironmentDependentColorBox
@@ -114,7 +116,7 @@ public final class _EnvironmentDependentColorBox: AnyColorBox {
     hasher.combine(resolver(EnvironmentValues()))
   }
 
-  init(_ resolver: @escaping (EnvironmentValues) -> Color) {
+  init(_ resolver: @MainActor @Sendable @escaping (EnvironmentValues) -> Color) {
     self.resolver = resolver
   }
 
@@ -123,7 +125,7 @@ public final class _EnvironmentDependentColorBox: AnyColorBox {
   }
 }
 
-public final class _OpacityColorBox: AnyColorBox {
+public final class _OpacityColorBox: AnyColorBox, @unchecked Sendable {
   public let parent: AnyColorBox
   public let opacity: Double
 
@@ -155,8 +157,8 @@ public final class _OpacityColorBox: AnyColorBox {
   }
 }
 
-public final class _SystemColorBox: AnyColorBox, CustomStringConvertible {
-  public enum SystemColor: String, Equatable, Hashable {
+public final class _SystemColorBox: AnyColorBox, CustomStringConvertible, @unchecked Sendable {
+  public enum SystemColor: String, Equatable, Hashable, Sendable {
     case clear
     case black
     case white

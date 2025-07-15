@@ -17,8 +17,7 @@
 
 import Foundation
 import OpenCombineShim
-@_spi(TokamakCore)
-import TokamakCore
+@_spi(TokamakCore) import TokamakCore
 
 public final class HTMLElement: FiberElement, CustomStringConvertible {
   public struct Content: FiberElementContent, Equatable {
@@ -80,8 +79,10 @@ public final class HTMLElement: FiberElement, CustomStringConvertible {
 
   public var description: String {
     """
-    <\(content.tag)\(content.attributes.map { " \($0.key.value)=\"\($0.value)\"" }
-      .joined(separator: ""))>\(content.innerHTML != nil ? "\(content.innerHTML!)" : "")\(!content
+    <\(content.tag)\(
+      content.attributes.map { " \($0.key.value)=\"\($0.value)\"" }
+        .joined(separator: "")
+    )>\(content.innerHTML != nil ? "\(content.innerHTML!)" : "")\(!content
       .children
       .isEmpty ? "\n" : "")\(content.children.map(\.description).joined(separator: "\n"))\(!content
       .children
@@ -96,21 +97,21 @@ public protocol HTMLConvertible {
   var namespace: String? { get }
   func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String]
   var innerHTML: String? { get }
-  func primitiveVisitor<V: ViewVisitor>(useDynamicLayout: Bool) -> ((V) -> ())?
+  func primitiveVisitor<V: ViewVisitor>(useDynamicLayout: Bool) -> ((V) -> Void)?
 }
 
-public extension HTMLConvertible {
+extension HTMLConvertible {
   @_spi(TokamakStaticHTML)
-  var namespace: String? { nil }
+  public var namespace: String? { nil }
   @_spi(TokamakStaticHTML)
-  var innerHTML: String? { nil }
-  func primitiveVisitor<V: ViewVisitor>(useDynamicLayout: Bool) -> ((V) -> ())? {
+  public var innerHTML: String? { nil }
+  public func primitiveVisitor<V: ViewVisitor>(useDynamicLayout: Bool) -> (@Sendable (V) -> Void)? {
     nil
   }
 }
 
 @_spi(TokamakStaticHTML)
-extension VStack: HTMLConvertible {
+extension VStack: @MainActor HTMLConvertible {
   @_spi(TokamakStaticHTML)
   public var tag: String { "div" }
 
@@ -131,7 +132,7 @@ extension VStack: HTMLConvertible {
 }
 
 @_spi(TokamakStaticHTML)
-extension HStack: HTMLConvertible {
+extension HStack: @MainActor HTMLConvertible {
   @_spi(TokamakStaticHTML)
   public var tag: String { "div" }
 
@@ -152,14 +153,15 @@ extension HStack: HTMLConvertible {
 }
 
 @_spi(TokamakCore)
-extension LayoutView: HTMLConvertible {
+extension LayoutView: @MainActor HTMLConvertible {
   public var tag: String { "div" }
   public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
     [:]
   }
 }
 
-public struct StaticHTMLFiberRenderer: FiberRenderer {
+@MainActor
+public struct StaticHTMLFiberRenderer: @MainActor FiberRenderer {
   public let rootElement: HTMLElement
   public let defaultEnvironment: EnvironmentValues
   public let sceneSize: CurrentValueSubject<CGSize, Never>
@@ -197,24 +199,20 @@ public struct StaticHTMLFiberRenderer: FiberRenderer {
   public func commit(_ mutations: [Mutation<Self>]) {
     for mutation in mutations {
       switch mutation {
-      case let .insert(element, parent, index):
+      case .insert(let element, let parent, let index):
         parent.content.children.insert(element, at: index)
-      case let .remove(element, parent):
+      case .remove(let element, let parent):
         parent?.content.children.removeAll(where: { $0 === element })
-      case let .replace(parent, previous, replacement):
-        guard let index = parent.content.children.firstIndex(where: { $0 === previous })
-        else { continue }
-        parent.content.children[index] = replacement
-      case let .update(previous, newContent, _):
+      case .update(let previous, let newContent, _):
         previous.update(with: newContent)
-      case let .layout(element, data):
+      case .layout(let element, let data):
         element.content.attributes["style", default: ""] += """
-        position: absolute;
-        left: \(data.origin.x)px;
-        top: \(data.origin.y)px;
-        width: \(data.dimensions.width)px;
-        height: \(data.dimensions.height)px;
-        """
+          position: absolute;
+          left: \(data.origin.x)px;
+          top: \(data.origin.y)px;
+          width: \(data.dimensions.width)px;
+          height: \(data.dimensions.height)px;
+          """
       }
     }
   }
@@ -237,25 +235,41 @@ public struct StaticHTMLFiberRenderer: FiberRenderer {
 
   public func render<A: App>(_ app: A) -> String {
     _ = FiberReconciler(self, app)
-    return """
-    <!doctype html>
-    <html>
-    \(rootElement.description)
-    </html>
-    """
+    return renderedHTML()
   }
 
   public func render<V: View>(_ view: V) -> String {
     _ = FiberReconciler(self, view)
-    return """
+    return renderedHTML()
+  }
+
+  private func renderedHTML() -> String {
+    """
     <!doctype html>
+    <head>
+    \(head.title != nil ? "<title>\(head.title!)</title>" : "")
+    \(head.metaTags.joined(separator: "\n"))
+    </head>
     <html>
     \(rootElement.description)
     </html>
     """
   }
 
-  public func schedule(_ action: @escaping () -> ()) {
+  private final class Head {
+    var metaTags = [String]()
+    var title: String?
+  }
+
+  private let head = Head()
+  public func preferencesChanged(_ preferenceStore: _PreferenceStore) {
+    head.metaTags = preferenceStore.value(forKey: HTMLMetaPreferenceKey.self).value.map {
+      $0.outerHTML()
+    }
+    head.title = preferenceStore.value(forKey: HTMLTitlePreferenceKey.self).value
+  }
+
+  public func schedule(_ action: @escaping () -> Void) {
     action()
   }
 }

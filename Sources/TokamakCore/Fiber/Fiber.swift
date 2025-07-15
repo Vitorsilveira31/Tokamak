@@ -19,8 +19,9 @@ import Foundation
 import OpenCombineShim
 
 // swiftlint:disable type_body_length
+@MainActor
 @_spi(TokamakCore)
-public extension FiberReconciler {
+extension FiberReconciler {
   /// A manager for a single `View`.
   ///
   /// There are always 2 `Fiber`s for every `View` in the tree,
@@ -39,7 +40,7 @@ public extension FiberReconciler {
   /// After the entire tree has been traversed, the current and work in progress trees are swapped,
   /// making the updated tree the current one,
   /// and leaving the previous current tree available to apply future changes on.
-  final class Fiber {
+  @MainActor public final class Fiber {
     weak var reconciler: FiberReconciler<Renderer>?
 
     /// The underlying value behind this `Fiber`. Either a `Scene` or `View` instance.
@@ -62,9 +63,6 @@ public extension FiberReconciler {
     ///
     /// Stored as an IUO because it uses `bindProperties` to create the underlying instance.
     var layout: AnyLayout?
-
-    /// The identity of this `View`
-    var id: Identity?
 
     /// The mounted element, if this is a `Renderer` primitive.
     var element: Renderer.ElementType?
@@ -122,22 +120,39 @@ public extension FiberReconciler {
     /// Will call `onSet` (usually a `Reconciler.reconcile` call) when updated.
     final class MutableStorage {
       private(set) var value: Any
-      let onSet: () -> ()
+      let onSet: () -> Void
 
       func setValue(_ newValue: Any, with transaction: Transaction) {
         value = newValue
         onSet()
       }
 
-      init(initialValue: Any, onSet: @escaping () -> ()) {
+      init(initialValue: Any, onSet: @escaping () -> Void) {
         value = initialValue
         self.onSet = onSet
       }
     }
 
-    public enum Identity: Hashable {
-      case explicit(AnyHashable)
-      case structural(index: Int)
+    /// The explicit identity of this `View`, if provided
+    var explicitId: AnyHashable? {
+      guard case .view(let v as _AnyIDView, _) = content else { return nil }
+      return v.anyId
+    }
+
+    /// Direct children of this fiber, keyed by their index
+    var mappedChildren: [Int: Fiber] {
+      var map = [Int: Fiber]()
+
+      var currentIndex = 0
+      var currentChild = child
+
+      while let aChild = currentChild {
+        map[currentIndex] = aChild
+        currentIndex += 1
+        currentChild = aChild.sibling
+      }
+
+      return map
     }
 
     init<V: View>(
@@ -213,7 +228,7 @@ public extension FiberReconciler {
         )
         self.alternate = alternate
         if self.parent?.child === self {
-          self.parent?.alternate?.child = alternate // Link it with our parent's alternate.
+          self.parent?.alternate?.child = alternate  // Link it with our parent's alternate.
         } else {
           // Find our left sibling.
           var node = self.parent?.child
@@ -222,7 +237,7 @@ public extension FiberReconciler {
             node = node?.sibling
           }
           if node?.sibling === self {
-            node?.alternate?.sibling = alternate // Link it with our left sibling's alternate.
+            node?.alternate?.sibling = alternate  // Link it with our left sibling's alternate.
           }
         }
         return alternate
@@ -288,29 +303,33 @@ public extension FiberReconciler {
         bindProperties(to: &value, TokamakCore.typeInfo(of: property.type), environment)
         // Create boxes for `@State` and other mutable properties.
         if var storage = value as? WritableValueStorage {
-          let box = self.state[property] ?? MutableStorage(
-            initialValue: storage.anyInitialValue,
-            onSet: { [weak self] in
-              guard let self = self else { return }
-              self.reconciler?.fiberChanged(self)
-            }
-          )
+          let box =
+            self.state[property]
+            ?? MutableStorage(
+              initialValue: storage.anyInitialValue,
+              onSet: { [weak self] in
+                guard let self = self else { return }
+                self.reconciler?.fiberChanged(self)
+              }
+            )
           state[property] = box
           storage.getter = { box.value }
           storage.setter = { box.setValue($0, with: $1) }
           value = storage
           // Create boxes for `@StateObject` and other immutable properties.
         } else if var storage = value as? ValueStorage {
-          let box = self.state[property] ?? MutableStorage(
-            initialValue: storage.anyInitialValue,
-            onSet: {}
-          )
+          let box =
+            self.state[property]
+            ?? MutableStorage(
+              initialValue: storage.anyInitialValue,
+              onSet: {}
+            )
           state[property] = box
           storage.getter = { box.value }
           value = storage
           // Read from the environment.
-        } else if var environmentReader = value as? EnvironmentReader {
-          environmentReader.setContent(from: environment)
+        } else if var environmentReader = value as? _EnvironmentReader {
+          environmentReader._setContent(from: environment)
           value = environmentReader
         }
         // Subscribe to observable properties.
@@ -322,8 +341,8 @@ public extension FiberReconciler {
         }
         property.set(value: value, on: &content)
       }
-      if var environmentReader = content as? EnvironmentReader {
-        environmentReader.setContent(from: environment)
+      if var environmentReader = content as? _EnvironmentReader {
+        environmentReader._setContent(from: environment)
         content = environmentReader
       }
     }
@@ -390,8 +409,10 @@ public extension FiberReconciler {
         layout = (view as? _AnyLayout)?._erased() ?? DefaultLayout.shared
       }
 
-      if Renderer.isPrimitive(view) {
-        return .init(from: view, useDynamicLayout: reconciler?.renderer.useDynamicLayout ?? false)
+      if Renderer.isPrimitive(view), let element = element {
+        let newContent = Renderer.ElementType.Content(
+          from: view, useDynamicLayout: reconciler?.renderer.useDynamicLayout ?? false)
+        return (element.content != newContent) ? newContent : nil
       } else {
         return nil
       }
@@ -423,7 +444,8 @@ public extension FiberReconciler {
           environment: .init(rootEnvironment),
           traits: .init(),
           preferenceStore: preferences
-        )
+        ),
+        preferenceStore: preferences ?? .init()
       )
       if let preferenceStore = outputs.preferenceStore {
         preferences = preferenceStore
@@ -546,7 +568,7 @@ public extension FiberReconciler {
         )
         self.alternate = alternate
         if self.parent?.child === self {
-          self.parent?.alternate?.child = alternate // Link it with our parent's alternate.
+          self.parent?.alternate?.child = alternate  // Link it with our parent's alternate.
         } else {
           // Find our left sibling.
           var node = self.parent?.child
@@ -555,7 +577,7 @@ public extension FiberReconciler {
             node = node?.sibling
           }
           if node?.sibling === self {
-            node?.alternate?.sibling = alternate // Link it with our left sibling's alternate.
+            node?.alternate?.sibling = alternate  // Link it with our left sibling's alternate.
           }
         }
         return alternate
@@ -604,15 +626,16 @@ public extension FiberReconciler {
       let environment = parent?.outputs.environment ?? .init(.init())
       bindProperties(to: &scene, typeInfo, environment.environment)
       var updateScene = scene
-      outputs = S._makeScene(.init(
-        content: scene,
-        updateContent: {
-          $0(&updateScene)
-        },
-        environment: environment,
-        traits: .init(),
-        preferenceStore: preferences
-      ))
+      outputs = S._makeScene(
+        .init(
+          content: scene,
+          updateContent: {
+            $0(&updateScene)
+          },
+          environment: environment,
+          traits: .init(),
+          preferenceStore: preferences
+        ))
       scene = updateScene
       content = content(for: scene)
 

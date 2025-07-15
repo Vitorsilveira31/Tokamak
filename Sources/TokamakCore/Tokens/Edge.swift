@@ -14,10 +14,10 @@
 
 import Foundation
 
-public enum Edge: Int8, CaseIterable {
+public enum Edge: Int8, CaseIterable, Sendable {
   case top, leading, bottom, trailing
 
-  public struct Set: OptionSet {
+  public struct Set: OptionSet, Sendable {
     public let rawValue: Int8
 
     public init(rawValue: Int8) {
@@ -44,7 +44,7 @@ public enum Edge: Int8, CaseIterable {
   }
 }
 
-public struct EdgeInsets: Equatable {
+public struct EdgeInsets: Equatable, Sendable {
   public var top: CGFloat
   public var leading: CGFloat
   public var bottom: CGFloat
@@ -66,7 +66,7 @@ public struct EdgeInsets: Equatable {
   }
 }
 
-extension EdgeInsets: Animatable, _VectorMath {
+extension EdgeInsets: @MainActor Animatable, @MainActor _VectorMath {
   public typealias AnimatableData = AnimatablePair<
     CGFloat,
     AnimatablePair<

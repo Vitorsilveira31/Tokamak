@@ -19,16 +19,16 @@
 @frozen
 public struct HierarchicalShapeStyle: ShapeStyle {
   @usableFromInline
-  internal var id: UInt32
+  var id: UInt32
 
   @inlinable
-  internal init(id: UInt32) {
+  init(id: UInt32) {
     self.id = id
   }
 
   public func _apply(to shape: inout _ShapeStyle_Shape) {
     if let foregroundStyle = shape.environment._foregroundStyle,
-       foregroundStyle.stylesArray.count > id
+      foregroundStyle.stylesArray.count > id
     {
       let style = foregroundStyle.stylesArray[Int(id)]
       if (style as? Self)?.id == id {
@@ -41,14 +41,15 @@ public struct HierarchicalShapeStyle: ShapeStyle {
       // Fallback to changing the opacity of the `foregroundColor`.
       shape.result = .color(
         (shape.environment.foregroundColor ?? .primary)
-          .opacity({
-            switch id {
-            case 0: return 1
-            case 1: return 0.5
-            case 2: return 0.3
-            default: return 0.2
-            }
-          }())
+          .opacity(
+            {
+              switch id {
+              case 0: return 1
+              case 1: return 0.5
+              case 2: return 0.3
+              default: return 0.2
+              }
+            }())
       )
     }
   }
@@ -56,9 +57,9 @@ public struct HierarchicalShapeStyle: ShapeStyle {
   public static func _apply(to type: inout _ShapeStyle_ShapeType) {}
 }
 
-public extension ShapeStyle where Self == HierarchicalShapeStyle {
-  static var primary: HierarchicalShapeStyle { .init(id: 0) }
-  static var secondary: HierarchicalShapeStyle { .init(id: 1) }
-  static var tertiary: HierarchicalShapeStyle { .init(id: 2) }
-  static var quaternary: HierarchicalShapeStyle { .init(id: 3) }
+extension ShapeStyle where Self == HierarchicalShapeStyle {
+  public static var primary: HierarchicalShapeStyle { .init(id: 0) }
+  public static var secondary: HierarchicalShapeStyle { .init(id: 1) }
+  public static var tertiary: HierarchicalShapeStyle { .init(id: 2) }
+  public static var quaternary: HierarchicalShapeStyle { .init(id: 3) }
 }

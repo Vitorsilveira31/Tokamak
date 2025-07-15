@@ -31,21 +31,22 @@ extension LazyHGrid: SpacerContainer {
   }
 }
 
-extension LazyHGrid: _HTMLPrimitive {
+extension LazyHGrid: @MainActor _HTMLPrimitive {
   public var lastRow: GridItem? {
     _LazyHGridProxy(self).rows.last
   }
 
-  @_spi(TokamakStaticHTML)
-  public var renderedBody: AnyView {
+  var styles: String {
     var styles = """
-    display: grid;
-    grid-template-rows: \(_LazyHGridProxy(self)
-      .rows
-      .map(\.description)
-      .joined(separator: " "));
-    grid-auto-flow: column;
-    """
+      display: grid;
+      grid-template-rows: \(
+        _LazyHGridProxy(self)
+          .rows
+          .map(\.description)
+          .joined(separator: " ")
+      );
+      grid-auto-flow: column;
+      """
     if fillCrossAxis {
       styles += "height: 100%;"
     }
@@ -55,8 +56,28 @@ extension LazyHGrid: _HTMLPrimitive {
       styles += "align-items: \(lastRow.alignment.vertical.cssValue);"
     }
     styles += "grid-gap: \(_LazyHGridProxy(self).spacing)px;"
-    return AnyView(HTML("div", ["style": styles]) {
-      _LazyHGridProxy(self).content
-    })
+    return styles
+  }
+  @_spi(TokamakStaticHTML)
+  public var renderedBody: AnyView {
+    AnyView(
+      HTML("div", ["style": styles]) {
+        _LazyHGridProxy(self).content
+      })
+  }
+}
+
+@_spi(TokamakStaticHTML)
+extension LazyHGrid: HTMLConvertible {
+  public var tag: String { "div" }
+  public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
+    guard !useDynamicLayout else { return [:] }
+    return ["style": styles]
+  }
+
+  public func primitiveVisitor<V>(useDynamicLayout: Bool) -> ((V) -> Void)? where V: ViewVisitor {
+    {
+      $0.visit(_LazyHGridProxy(self).content)
+    }
   }
 }

@@ -17,21 +17,24 @@
 
 import Foundation
 
-public struct ContainerRelativeShape: Shape, EnvironmentReader {
+public struct ContainerRelativeShape: Shape {
   var containerShape: (CGRect, GeometryProxy) -> Path? = { _, _ in nil }
 
   public func path(in rect: CGRect) -> Path {
-    containerShape(rect, GeometryProxy(size: rect.size)) ?? Rectangle().path(in: rect)
+    containerShape(rect, GeometryProxy(globalRect: rect)) ?? Rectangle().path(in: rect)
   }
 
   public init() {}
 
-  public mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     containerShape = values._containerShape
   }
 }
 
-extension ContainerRelativeShape: InsettableShape {
+@_spi(TokamakCore)
+extension ContainerRelativeShape: _EnvironmentReader {}
+
+extension ContainerRelativeShape: @MainActor InsettableShape {
   @inlinable
   public func inset(by amount: CGFloat) -> some InsettableShape {
     _Inset(amount: amount)
@@ -39,22 +42,22 @@ extension ContainerRelativeShape: InsettableShape {
 
   @usableFromInline
   @frozen
-  internal struct _Inset: InsettableShape, DynamicProperty {
+  struct _Inset: @MainActor InsettableShape, DynamicProperty {
     @usableFromInline
-    internal var amount: CGFloat
+    var amount: CGFloat
     @inlinable
-    internal init(amount: CGFloat) {
+    init(amount: CGFloat) {
       self.amount = amount
     }
 
     @usableFromInline
-    internal func path(in rect: CGRect) -> Path {
+    func path(in rect: CGRect) -> Path {
       // FIXME: Inset the container shape.
       Rectangle().path(in: rect)
     }
 
     @inlinable
-    internal func inset(by amount: CGFloat) -> ContainerRelativeShape._Inset {
+    func inset(by amount: CGFloat) -> ContainerRelativeShape._Inset {
       var copy = self
       copy.amount += amount
       return copy
@@ -62,12 +65,14 @@ extension ContainerRelativeShape: InsettableShape {
   }
 }
 
-private extension EnvironmentValues {
-  enum ContainerShapeKey: EnvironmentKey {
+extension EnvironmentValues {
+  @MainActor
+  fileprivate enum ContainerShapeKey: @MainActor EnvironmentKey {
     static let defaultValue: (CGRect, GeometryProxy) -> Path? = { _, _ in nil }
   }
 
-  var _containerShape: (CGRect, GeometryProxy) -> Path? {
+  @MainActor
+  fileprivate var _containerShape: (CGRect, GeometryProxy) -> Path? {
     get {
       self[ContainerShapeKey.self]
     }
@@ -95,16 +100,16 @@ public struct _ContainerShapeModifier<Shape>: ViewModifier where Shape: Insettab
       content
         .environment(\._containerShape) { rect, proxy in
           shape
-            .inset(by: proxy.size.width) // TODO: Calculate the offset using content's geometry
+            .inset(by: proxy.size.width)  // TODO: Calculate the offset using content's geometry
             .path(in: rect)
         }
     }
   }
 }
 
-public extension View {
+extension View {
   @inlinable
-  func containerShape<T>(_ shape: T) -> some View where T: InsettableShape {
+  public func containerShape<T>(_ shape: T) -> some View where T: InsettableShape {
     modifier(_ContainerShapeModifier(shape: shape))
   }
 }

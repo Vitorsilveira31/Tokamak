@@ -1,3 +1,5 @@
+import Foundation
+
 // Copyright 2020-2021 Tokamak contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +16,6 @@
 //
 //  Created by Max Desiatov on 08/04/2020.
 //
-
-import CoreFoundation
-import Foundation
 
 extension CGPoint {
   func rotate(_ angle: Angle, around origin: Self) -> Self {
@@ -36,9 +35,9 @@ extension CGPoint {
   }
 }
 
-public extension CGAffineTransform {
+extension CGAffineTransform {
   /// Transform the point into the transform's coordinate system.
-  func transform(point: CGPoint) -> CGPoint {
+  public func transform(point: CGPoint) -> CGPoint {
     CGPoint(
       x: (a * point.x) + (c * point.y) + tx,
       y: (b * point.x) + (d * point.y) + ty
@@ -46,8 +45,8 @@ public extension CGAffineTransform {
   }
 }
 
-#if !canImport(CoreGraphics)
-public enum CGLineCap {
+
+public enum CGLineCap: Sendable {
   /// A line with a squared-off end. Extends to the endpoint of the Path.
   case butt
   /// A line with a rounded end. Extends past the endpoint of the Path.
@@ -56,7 +55,7 @@ public enum CGLineCap {
   case square
 }
 
-public enum CGLineJoin {
+public enum CGLineJoin: Sendable {
   case miter
   /// A join with a rounded end. Extends past the endpoint of the Path.
   case round
@@ -69,7 +68,7 @@ public enum CGLineJoin {
 ///     a   b   0
 ///     c   d   0
 ///     tx  ty  1
-public struct CGAffineTransform: Equatable {
+public struct CGAffineTransform: Equatable, Sendable {
   public var a: CGFloat
   public var b: CGFloat
   public var c: CGFloat
@@ -80,12 +79,12 @@ public struct CGAffineTransform: Equatable {
   /// The identity matrix
   public static let identity: Self = .init(
     a: 1,
-    b: 0, // 0
+    b: 0,  // 0
     c: 0,
-    d: 1, // 0
+    d: 1,  // 0
     tx: 0,
     ty: 0
-  ) // 1
+  )  // 1
 
   public init(
     a: CGFloat, b: CGFloat,
@@ -145,15 +144,21 @@ public struct CGAffineTransform: Equatable {
   ///   - t2: The affine transform to concatenate to this affine transform.
   /// - Returns: A new affine transformation matrix. That is, `t’ = t1*t2`.
   public func concatenating(_ t2: Self) -> Self {
-    let t1m = [[a, b, 0],
-               [c, d, 0],
-               [tx, ty, 1]]
-    let t2m = [[t2.a, t2.b, 0],
-               [t2.c, t2.d, 0],
-               [t2.tx, t2.ty, 1]]
-    var res: [[CGFloat]] = [[0, 0, 0],
-                            [0, 0, 0],
-                            [0, 0, 0]]
+    let t1m = [
+      [a, b, 0],
+      [c, d, 0],
+      [tx, ty, 1],
+    ]
+    let t2m = [
+      [t2.a, t2.b, 0],
+      [t2.c, t2.d, 0],
+      [t2.tx, t2.ty, 1],
+    ]
+    var res: [[CGFloat]] = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+    ]
     for i in 0..<3 {
       for j in 0..<3 {
         res[i][j] = 0
@@ -207,5 +212,3 @@ public struct CGAffineTransform: Equatable {
     self == Self.identity
   }
 }
-
-#endif

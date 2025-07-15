@@ -20,8 +20,22 @@ public protocol SceneVisitor: ViewVisitor {
   func visit<S: Scene>(_ scene: S)
 }
 
-public extension Scene {
-  func _visitChildren<V: SceneVisitor>(_ visitor: V) {
+extension Scene {
+  public func _visitChildren<V: SceneVisitor>(_ visitor: V) {
+    print("🎭 Scene._visitChildren called for:", String(describing: type(of: self)))
+
+    // If the scene is a primitive (e.g., WindowGroup), visit itself instead of trying to visit its body
+    if let primitiveScene = self as? any SceneDeferredToRenderer {
+      print(
+        "🎭 Found primitive scene with deferred view:",
+        String(describing: primitiveScene.deferredBody))
+      // Visit the primitive scene's deferred view
+      visitor.visit(primitiveScene.deferredBody)
+      return
+    }
+
+    print("🎭 Scene body type:", String(describing: type(of: body)))
+    print("🎭 Scene visitor type:", String(describing: type(of: visitor)))
     visitor.visit(body)
   }
 }
@@ -35,7 +49,7 @@ protocol SceneReducer: ViewReducer {
 
 extension SceneReducer {
   static func reduce<S: Scene>(into partialResult: inout Result, nextScene: S) {
-    partialResult = Self.reduce(partialResult: partialResult, nextScene: nextScene)
+    partialResult = reduce(partialResult: partialResult, nextScene: nextScene)
   }
 
   static func reduce<S: Scene>(partialResult: Result, nextScene: S) -> Result {
@@ -51,15 +65,49 @@ final class SceneReducerVisitor<R: SceneReducer>: SceneVisitor {
   var result: R.Result
 
   init(initialResult: R.Result) {
+    print("🎭 Creating SceneReducerVisitor with reducer type:", String(describing: R.self))
     result = initialResult
   }
 
   func visit<S>(_ scene: S) where S: Scene {
+    print("🎭 SceneReducerVisitor.visit called for scene type:", String(describing: type(of: scene)))
+    print("🎭 Scene value:", String(describing: scene))
+    print("🎭 Reducer type:", String(describing: R.self))
+
+    if let primitiveScene = scene as? any SceneDeferredToRenderer {
+      print(
+        "🎭 Found primitive scene with deferred view and title:",
+        String(describing: primitiveScene.deferredBody), String(describing: primitiveScene.title))
+      R.reduce(into: &result, nextView: primitiveScene.deferredBody)
+      return
+    }
+
+    print("🎭 Scene body type:", String(describing: type(of: scene.body)))
+    print("🎭 About to call reduce")
     R.reduce(into: &result, nextScene: scene)
+    print("🎭 Successfully reduced scene")
   }
 
   func visit<V>(_ view: V) where V: View {
+    print("🎭 SceneReducerVisitor.visit called for view type:", String(describing: type(of: view)))
+    print("🎭 View value:", String(describing: view))
+    print("🎭 Reducer type:", String(describing: R.self))
+
+    // Check if this is a primitive view based on either:
+    // 1. _PrimitiveView conformance or
+    // 2. View with Never body type
+    let isPrimitive = (view is any _PrimitiveView) || (V.Body.self == Never.self)
+
+    if isPrimitive {
+      print("🎭 Found primitive view, reducing directly")
+      R.reduce(into: &result, nextView: view)
+      return
+    }
+
+    print("🎭 View body type:", String(describing: type(of: view.body)))
+    print("🎭 About to call reduce")
     R.reduce(into: &result, nextView: view)
+    print("🎭 Successfully reduced view")
   }
 }
 

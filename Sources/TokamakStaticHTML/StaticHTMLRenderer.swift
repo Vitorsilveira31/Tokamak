@@ -27,7 +27,8 @@ extension EnvironmentValues {
   }
 }
 
-public final class HTMLTarget: Target {
+@MainActor
+public final class HTMLTarget: @MainActor Target {
   var html: AnyHTML
   var children: [HTMLTarget] = []
 
@@ -54,26 +55,27 @@ struct HTMLBody: AnyHTML {
   let tag: String = "body"
   public func innerHTML(shouldSortAttributes: Bool) -> String? { nil }
   let attributes: [HTMLAttribute: String] = [
-    "style": "margin: 0;" + rootNodeStyles,
+    "style": "margin: 0;" + rootNodeStyles
   ]
 }
 
-extension HTMLMeta.MetaTag {
+public extension HTMLMeta.MetaTag {
   func outerHTML() -> String {
     switch self {
-    case let .charset(charset):
+    case .charset(let charset):
       return #"<meta charset="\#(charset)">"#
-    case let .name(name, content):
+    case .name(let name, let content):
       return #"<meta name="\#(name)" content="\#(content)">"#
-    case let .property(property, content):
+    case .property(let property, let content):
       return #"<meta property="\#(property)" content="\#(content)">"#
-    case let .httpEquiv(httpEquiv, content):
+    case .httpEquiv(let httpEquiv, let content):
       return #"<meta http-equiv="\#(httpEquiv)" content="\#(content)">"#
     }
   }
 }
 
-public final class StaticHTMLRenderer: Renderer {
+@MainActor
+public final class StaticHTMLRenderer: @MainActor Renderer {
   private var reconciler: StackReconciler<StaticHTMLRenderer>?
 
   var rootTarget: HTMLTarget
@@ -140,10 +142,12 @@ public final class StaticHTMLRenderer: Renderer {
     to parent: HTMLTarget,
     with host: MountedHost
   ) -> HTMLTarget? {
-    guard let html = mapAnyView(
-      host.view,
-      transform: { (html: AnyHTML) in html }
-    ) else {
+    guard
+      let html = mapAnyView(
+        host.view,
+        transform: { (html: AnyHTML) in html }
+      )
+    else {
       // handle cases like `TupleView`
       if mapAnyView(host.view, transform: { (view: ParentView) in view }) != nil {
         return parent

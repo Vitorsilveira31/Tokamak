@@ -15,6 +15,11 @@
 //  Created by Carson Katri on 7/16/20.
 //
 
+@_spi(TokamakCore)
+public struct _WindowGroupTitle: _PrimitiveView {
+  public let title: Text?
+}
+
 public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
   public let id: String
   public let title: Text?
@@ -36,8 +41,7 @@ public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
 
   @_disfavoredOverload
   public init<S>(_ title: S, id: String, @ViewBuilder content: () -> Content)
-    where S: StringProtocol
-  {
+  where S: StringProtocol {
     self.id = id
     self.title = Text(title)
     self.content = content()
@@ -69,14 +73,23 @@ public struct WindowGroup<Content>: Scene, TitledScene where Content: View {
   }
 
   // TODO: Implement LocalizedStringKey
-//  public init(_ titleKey: LocalizedStringKey,
-//              id: String,
-//              @ViewBuilder content: () -> Content)
-//  public init(_ titleKey: LocalizedStringKey,
-//              @ViewBuilder content: () -> Content) {
-//  }
+  //  public init(_ titleKey: LocalizedStringKey,
+  //              id: String,
+  //              @ViewBuilder content: () -> Content)
+  //  public init(_ titleKey: LocalizedStringKey,
+  //              @ViewBuilder content: () -> Content) {
+  //  }
 
   public func _visitChildren<V>(_ visitor: V) where V: SceneVisitor {
+    if let title = title {
+      visitor.visit(_WindowGroupTitle(title: title))
+    }
     visitor.visit(content)
   }
 }
+
+// extension WindowGroup: SceneDeferredToRenderer {
+//   public var deferredBody: AnyView {
+//     AnyView(content)
+//   }
+// }

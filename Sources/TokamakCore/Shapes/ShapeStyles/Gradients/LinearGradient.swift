@@ -18,10 +18,10 @@
 import Foundation
 
 @frozen
-public struct LinearGradient: ShapeStyle, View {
-  internal var gradient: Gradient
-  internal var startPoint: UnitPoint
-  internal var endPoint: UnitPoint
+public struct LinearGradient: @MainActor ShapeStyle, @MainActor View {
+  var gradient: Gradient
+  var startPoint: UnitPoint
+  var endPoint: UnitPoint
 
   public init(gradient: Gradient, startPoint: UnitPoint, endPoint: UnitPoint) {
     self.gradient = gradient
@@ -53,9 +53,9 @@ public struct LinearGradient: ShapeStyle, View {
 
   public static func _apply(to type: inout _ShapeStyle_ShapeType) {}
 }
-
-public extension ShapeStyle where Self == LinearGradient {
-  static func linearGradient(
+@MainActor
+extension ShapeStyle where Self == LinearGradient {
+  public static func linearGradient(
     _ gradient: Gradient,
     startPoint: UnitPoint,
     endPoint: UnitPoint
@@ -63,7 +63,7 @@ public extension ShapeStyle where Self == LinearGradient {
     .init(gradient: gradient, startPoint: startPoint, endPoint: endPoint)
   }
 
-  static func linearGradient(
+  public static func linearGradient(
     colors: [Color],
     startPoint: UnitPoint,
     endPoint: UnitPoint
@@ -71,7 +71,7 @@ public extension ShapeStyle where Self == LinearGradient {
     .init(colors: colors, startPoint: startPoint, endPoint: endPoint)
   }
 
-  static func linearGradient(
+  public static func linearGradient(
     stops: [Gradient.Stop],
     startPoint: UnitPoint,
     endPoint: UnitPoint

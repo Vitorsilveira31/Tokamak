@@ -15,7 +15,7 @@
 //  Created by Max Desiatov on 16/10/2018.
 //
 
-public struct Color: Hashable, Equatable {
+public struct Color: Hashable, Equatable, Sendable {
   public static func == (lhs: Self, rhs: Self) -> Bool {
     lhs.provider == rhs.provider
   }
@@ -26,7 +26,7 @@ public struct Color: Hashable, Equatable {
 
   let provider: AnyColorBox
 
-  internal init(_ provider: AnyColorBox) {
+  init(_ provider: AnyColorBox) {
     self.provider = provider
   }
 
@@ -37,9 +37,10 @@ public struct Color: Hashable, Equatable {
     blue: Double,
     opacity: Double = 1
   ) {
-    self.init(_ConcreteColorBox(
-      .init(red: red, green: green, blue: blue, opacity: opacity, space: colorSpace)
-    ))
+    self.init(
+      _ConcreteColorBox(
+        .init(red: red, green: green, blue: blue, opacity: opacity, space: colorSpace)
+      ))
   }
 
   public init(_ colorSpace: RGBColorSpace = .sRGB, white: Double, opacity: Double = 1) {
@@ -59,19 +60,23 @@ public struct Color: Hashable, Equatable {
 
   /// Create a `Color` dependent on the current `ColorScheme`.
   @_spi(TokamakCore)
-  public static func _withScheme(_ resolver: @escaping (ColorScheme) -> Self) -> Self {
-    .init(_EnvironmentDependentColorBox {
-      resolver($0.colorScheme)
-    })
+  public static func _withScheme(_ resolver: @MainActor @Sendable @escaping (ColorScheme) -> Self)
+    -> Self
+  {
+    .init(
+      _EnvironmentDependentColorBox {
+        resolver($0.colorScheme)
+      })
   }
 }
 
-public extension Color {
-  func opacity(_ opacity: Double) -> Self {
+extension Color {
+  public func opacity(_ opacity: Double) -> Self {
     Self(_OpacityColorBox(provider, opacity: opacity))
   }
 }
 
+@MainActor
 public struct _ColorProxy {
   let subject: Color
   public init(_ subject: Color) { self.subject = subject }
@@ -84,15 +89,15 @@ public struct _ColorProxy {
   }
 }
 
-public extension Color {
-  enum RGBColorSpace {
+extension Color {
+  public enum RGBColorSpace: Sendable {
     case sRGB
     case sRGBLinear
     case displayP3
   }
 }
 
-extension Color: CustomStringConvertible {
+extension Color: @MainActor CustomStringConvertible {
   public var description: String {
     if let providerDescription = provider as? CustomStringConvertible {
       return providerDescription.description
@@ -102,49 +107,50 @@ extension Color: CustomStringConvertible {
   }
 }
 
-public extension Color {
+extension Color {
   private init(systemColor: _SystemColorBox.SystemColor) {
     self.init(_SystemColorBox(systemColor))
   }
 
-  static let clear: Self = .init(systemColor: .clear)
-  static let black: Self = .init(systemColor: .black)
-  static let white: Self = .init(systemColor: .white)
-  static let gray: Self = .init(systemColor: .gray)
-  static let red: Self = .init(systemColor: .red)
-  static let green: Self = .init(systemColor: .green)
-  static let blue: Self = .init(systemColor: .blue)
-  static let orange: Self = .init(systemColor: .orange)
-  static let yellow: Self = .init(systemColor: .yellow)
-  static let pink: Self = .init(systemColor: .pink)
-  static let purple: Self = .init(systemColor: .purple)
-  static let primary: Self = .init(systemColor: .primary)
+  @MainActor public static let clear: Self = .init(systemColor: .clear)
+  @MainActor public static let black: Self = .init(systemColor: .black)
+  @MainActor public static let white: Self = .init(systemColor: .white)
+  @MainActor public static let gray: Self = .init(systemColor: .gray)
+  @MainActor public static let red: Self = .init(systemColor: .red)
+  @MainActor public static let green: Self = .init(systemColor: .green)
+  @MainActor public static let blue: Self = .init(systemColor: .blue)
+  @MainActor public static let orange: Self = .init(systemColor: .orange)
+  @MainActor public static let yellow: Self = .init(systemColor: .yellow)
+  @MainActor public static let pink: Self = .init(systemColor: .pink)
+  @MainActor public static let purple: Self = .init(systemColor: .purple)
+  @MainActor public static let primary: Self = .init(systemColor: .primary)
 
-  static let secondary: Self = .init(systemColor: .secondary)
-  static let accentColor: Self = .init(_EnvironmentDependentColorBox {
-    $0.accentColor ?? Self.blue
-  })
+  public static let secondary: Self = .init(systemColor: .secondary)
+  public static let accentColor: Self = .init(
+    _EnvironmentDependentColorBox {
+      $0.accentColor ?? Self.blue
+    })
 
-  init(_ color: UIColor) {
+  public init(_ color: UIColor) {
     self = color.color
   }
 }
 
-public extension ShapeStyle where Self == Color {
-  static var clear: Self { .clear }
-  static var black: Self { .black }
-  static var white: Self { .white }
-  static var gray: Self { .gray }
-  static var red: Self { .red }
-  static var green: Self { .green }
-  static var blue: Self { .blue }
-  static var orange: Self { .orange }
-  static var yellow: Self { .yellow }
-  static var pink: Self { .pink }
-  static var purple: Self { .purple }
+extension ShapeStyle where Self == Color {
+  public static var clear: Self { .clear }
+  public static var black: Self { .black }
+  public static var white: Self { .white }
+  public static var gray: Self { .gray }
+  public static var red: Self { .red }
+  public static var green: Self { .green }
+  public static var blue: Self { .blue }
+  public static var orange: Self { .orange }
+  public static var yellow: Self { .yellow }
+  public static var pink: Self { .pink }
+  public static var purple: Self { .purple }
 }
 
-extension Color: ExpressibleByIntegerLiteral {
+extension Color: @MainActor ExpressibleByIntegerLiteral {
   /// Allows initializing value of `Color` type from hex values
   public init(integerLiteral bitMask: UInt32) {
     self.init(
@@ -157,8 +163,8 @@ extension Color: ExpressibleByIntegerLiteral {
   }
 }
 
-public extension Color {
-  init?(hex: String) {
+extension Color {
+  public init?(hex: String) {
     let cArray = Array(hex.count > 6 ? String(hex.dropFirst()) : hex)
 
     guard cArray.count == 6 else { return nil }
@@ -188,6 +194,6 @@ extension Color: ShapeStyle {
   public static func _apply(to type: inout _ShapeStyle_ShapeType) {}
 }
 
-extension Color: View {
+extension Color: @MainActor View {
   public typealias Body = _ShapeView<Rectangle, Self>
 }

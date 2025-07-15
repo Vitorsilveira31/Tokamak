@@ -17,13 +17,16 @@
 
 import Foundation
 
-public class _AnimationBoxBase: Equatable {
+public class _AnimationBoxBase: Equatable, @unchecked Sendable {
+
+  init() {}
+
   public struct _Resolved {
     public var duration: Double {
       switch style {
-      case let .timingCurve(_, _, _, _, duration):
+      case .timingCurve(_, _, _, _, let duration):
         return duration
-      case let .solver(solver):
+      case .solver(let solver):
         return solver.restingPoint(precision: 0.01)
       }
     }
@@ -33,22 +36,34 @@ public class _AnimationBoxBase: Equatable {
     public var repeatStyle: _RepeatStyle
     public var style: _Style
 
-    public enum _Style: Equatable {
+    public init(
+      delay: Double,
+      speed: Double = 1,
+      repeatStyle: _RepeatStyle = .fixed(1, autoreverses: true),
+      style: _Style
+    ) {
+      self.delay = delay
+      self.speed = speed
+      self.repeatStyle = repeatStyle
+      self.style = style
+    }
+
+    public enum _Style: Equatable, Sendable {
       case timingCurve(Double, Double, Double, Double, duration: Double)
       case solver(_AnimationSolver)
 
       public static func == (lhs: Self, rhs: Self) -> Bool {
         switch lhs {
-        case let .timingCurve(lhs0, lhs1, lhs2, lhs3, lhsDuration):
-          if case let .timingCurve(rhs0, rhs1, rhs2, rhs3, rhsDuration) = rhs {
+        case .timingCurve(let lhs0, let lhs1, let lhs2, let lhs3, let lhsDuration):
+          if case .timingCurve(let rhs0, let rhs1, let rhs2, let rhs3, let rhsDuration) = rhs {
             return lhs0 == rhs0
               && lhs1 == rhs1
               && lhs2 == rhs2
               && lhs3 == rhs3
               && lhsDuration == rhsDuration
           }
-        case let .solver(lhsSolver):
-          if case let .solver(rhsSolver) = rhs {
+        case .solver(let lhsSolver):
+          if case .solver(let rhsSolver) = rhs {
             return type(of: lhsSolver) == type(of: rhsSolver)
           }
         }
@@ -62,8 +77,8 @@ public class _AnimationBoxBase: Equatable {
 
       public var autoreverses: Bool {
         switch self {
-        case let .fixed(_, autoreverses),
-             let .forever(autoreverses):
+        case .fixed(_, let autoreverses),
+          .forever(let autoreverses):
           return autoreverses
         }
       }
@@ -83,7 +98,7 @@ public class _AnimationBoxBase: Equatable {
   }
 }
 
-final class StyleAnimationBox: _AnimationBoxBase {
+final class StyleAnimationBox: _AnimationBoxBase, @unchecked Sendable {
   let style: _Resolved._Style
 
   init(style: _Resolved._Style) {
@@ -100,7 +115,7 @@ final class StyleAnimationBox: _AnimationBoxBase {
   }
 }
 
-final class DelayedAnimationBox: _AnimationBoxBase {
+final class DelayedAnimationBox: _AnimationBoxBase, @unchecked Sendable {
   let delay: Double
   let parent: _AnimationBoxBase
 
@@ -121,7 +136,7 @@ final class DelayedAnimationBox: _AnimationBoxBase {
   }
 }
 
-final class RetimedAnimationBox: _AnimationBoxBase {
+final class RetimedAnimationBox: _AnimationBoxBase, @unchecked Sendable {
   let speed: Double
   let parent: _AnimationBoxBase
 
@@ -142,7 +157,7 @@ final class RetimedAnimationBox: _AnimationBoxBase {
   }
 }
 
-final class RepeatedAnimationBox: _AnimationBoxBase {
+final class RepeatedAnimationBox: _AnimationBoxBase, @unchecked Sendable {
   let style: _AnimationBoxBase._Resolved._RepeatStyle
   let parent: _AnimationBoxBase
 

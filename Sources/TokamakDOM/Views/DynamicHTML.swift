@@ -17,21 +17,22 @@
 
 import JavaScriptKit
 import TokamakCore
-import TokamakStaticHTML
+@_spi(TokamakStaticHTML) import TokamakStaticHTML
 
 public typealias HTML = TokamakStaticHTML.HTML
 
-public typealias Listener = (JSObject) -> ()
+public typealias Listener = (JSObject) -> Void
 
 protocol AnyDynamicHTML: AnyHTML {
   var listeners: [String: Listener] { get }
 }
 
-public struct DynamicHTML<Content>: View, AnyDynamicHTML {
+public struct DynamicHTML<Content>: View, @MainActor AnyDynamicHTML {
   public let tag: String
   public let attributes: [HTMLAttribute: String]
   public let listeners: [String: Listener]
   let content: Content
+  let visitContent: (ViewVisitor) -> Void
 
   fileprivate let cachedInnerHTML: String?
 
@@ -43,10 +44,14 @@ public struct DynamicHTML<Content>: View, AnyDynamicHTML {
   public var body: Never {
     neverBody("HTML")
   }
+
+  public func _visitChildren<V>(_ visitor: V) where V: ViewVisitor {
+    visitContent(visitor)
+  }
 }
 
-public extension DynamicHTML where Content: StringProtocol {
-  init(
+extension DynamicHTML where Content: StringProtocol {
+  public init(
     _ tag: String,
     _ attributes: [HTMLAttribute: String] = [:],
     listeners: [String: Listener] = [:],
@@ -57,6 +62,7 @@ public extension DynamicHTML where Content: StringProtocol {
     self.listeners = listeners
     self.content = content
     cachedInnerHTML = String(content)
+    visitContent = { _ in }
   }
 }
 
@@ -65,13 +71,14 @@ extension DynamicHTML: ParentView where Content: View {
     _ tag: String,
     _ attributes: [HTMLAttribute: String] = [:],
     listeners: [String: Listener] = [:],
-    @ViewBuilder content: () -> Content
+    @ViewBuilder content: @escaping () -> Content
   ) {
     self.tag = tag
     self.attributes = attributes
     self.listeners = listeners
     self.content = content()
     cachedInnerHTML = nil
+    visitContent = { $0.visit(content()) }
   }
 
   @_spi(TokamakCore)
@@ -80,12 +87,19 @@ extension DynamicHTML: ParentView where Content: View {
   }
 }
 
-public extension DynamicHTML where Content == EmptyView {
-  init(
+extension DynamicHTML where Content == EmptyView {
+  public init(
     _ tag: String,
     _ attributes: [HTMLAttribute: String] = [:],
     listeners: [String: Listener] = [:]
   ) {
     self = DynamicHTML(tag, attributes, listeners: listeners) { EmptyView() }
+  }
+}
+
+@_spi(TokamakStaticHTML)
+extension DynamicHTML: HTMLConvertible {
+  public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
+    attributes
   }
 }

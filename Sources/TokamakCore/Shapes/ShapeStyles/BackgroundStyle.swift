@@ -44,23 +44,21 @@ extension EnvironmentValues {
   }
 }
 
-public extension View {
+extension View {
   @inlinable
-  func background() -> some View {
+  public func background() -> some View {
     modifier(_BackgroundStyleModifier(style: BackgroundStyle()))
   }
 
   @inlinable
-  func background<S>(_ style: S) -> some View where S: ShapeStyle {
+  public func background<S>(_ style: S) -> some View where S: ShapeStyle {
     modifier(_BackgroundStyleModifier(style: style))
   }
 }
 
 @frozen
-public struct _BackgroundStyleModifier<Style>: ViewModifier, _EnvironmentModifier,
-  EnvironmentReader
-  where Style: ShapeStyle
-{
+public struct _BackgroundStyleModifier<Style>: ViewModifier, _EnvironmentModifier
+where Style: ShapeStyle {
   public var environment: EnvironmentValues!
   public var style: Style
 
@@ -70,7 +68,7 @@ public struct _BackgroundStyleModifier<Style>: ViewModifier, _EnvironmentModifie
   }
 
   public typealias Body = Never
-  public mutating func setContent(from values: EnvironmentValues) {
+  public mutating func _setContent(from values: EnvironmentValues) {
     environment = values
   }
 
@@ -82,6 +80,9 @@ public struct _BackgroundStyleModifier<Style>: ViewModifier, _EnvironmentModifie
   }
 }
 
-public extension ShapeStyle where Self == BackgroundStyle {
-  static var background: Self { .init() }
+extension ShapeStyle where Self == BackgroundStyle {
+  public static var background: Self { .init() }
 }
+
+@_spi(TokamakCore)
+extension _BackgroundStyleModifier: _EnvironmentReader {}

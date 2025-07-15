@@ -27,6 +27,7 @@ public typealias EnvironmentObject = TokamakCore.EnvironmentObject
 public typealias EnvironmentValues = TokamakCore.EnvironmentValues
 
 public typealias PreferenceKey = TokamakCore.PreferenceKey
+public typealias CoordinateSpace = TokamakCore.CoordinateSpace
 
 public typealias Binding = TokamakCore.Binding
 public typealias ObservableObject = TokamakCore.ObservableObject
@@ -115,7 +116,7 @@ public typealias Color = TokamakCore.Color
 public typealias Font = TokamakCore.Font
 
 #if !canImport(CoreGraphics)
-public typealias CGAffineTransform = TokamakCore.CGAffineTransform
+  public typealias CGAffineTransform = TokamakCore.CGAffineTransform
 #endif
 
 public typealias Angle = TokamakCore.Angle
@@ -175,6 +176,18 @@ public typealias TimelineView = TokamakCore.TimelineView
 public typealias Toggle = TokamakCore.Toggle
 public typealias VStack = TokamakCore.VStack
 public typealias ZStack = TokamakCore.ZStack
+
+public typealias Grid = TokamakCore.Grid
+public typealias GridRow = TokamakCore.GridRow
+
+// MARK: Gestures
+
+public typealias Gesture = TokamakCore.Gesture
+public typealias GestureMask = TokamakCore.GestureMask
+public typealias GestureState = TokamakCore.GestureState
+public typealias TapGesture = TokamakCore.TapGesture
+public typealias DragGesture = TokamakCore.DragGesture
+public typealias LongPressGesture = TokamakCore.LongPressGesture
 
 // MARK: Special Views
 
@@ -247,8 +260,8 @@ public func withAnimation<Result>(
 
 // FIXME: I would put this inside TokamakCore, but for
 // some reason it doesn't get exported with the typealias
-public extension Text {
-  static func + (lhs: Self, rhs: Self) -> Self {
+extension Text {
+  public static func + (lhs: Self, rhs: Self) -> Self {
     _concatenating(lhs: lhs, rhs: rhs)
   }
 }

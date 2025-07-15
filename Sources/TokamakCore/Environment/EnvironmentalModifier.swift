@@ -22,9 +22,8 @@ public protocol EnvironmentalModifier: ViewModifier {
   static var _requiresMainThread: Bool { get }
 }
 
-private struct EnvironmentalModifierResolver<M>: ViewModifier, EnvironmentReader
-  where M: EnvironmentalModifier
-{
+private struct EnvironmentalModifierResolver<M>: ViewModifier, _EnvironmentReader
+where M: EnvironmentalModifier {
   let modifier: M
   var resolved: M.ResolvedModifier!
 
@@ -32,15 +31,15 @@ private struct EnvironmentalModifierResolver<M>: ViewModifier, EnvironmentReader
     content.modifier(resolved)
   }
 
-  mutating func setContent(from values: EnvironmentValues) {
+  mutating func _setContent(from values: EnvironmentValues) {
     resolved = modifier.resolve(in: values)
   }
 }
 
-public extension EnvironmentalModifier {
-  static var _requiresMainThread: Bool { true }
+extension EnvironmentalModifier {
+  public static var _requiresMainThread: Bool { true }
 
-  func body(content: _ViewModifier_Content<Self>) -> some View {
+  public func body(content: _ViewModifier_Content<Self>) -> some View {
     content.modifier(EnvironmentalModifierResolver(modifier: self))
   }
 }

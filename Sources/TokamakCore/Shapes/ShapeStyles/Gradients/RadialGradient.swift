@@ -18,11 +18,11 @@
 import Foundation
 
 @frozen
-public struct RadialGradient: ShapeStyle, View {
-  internal var gradient: Gradient
-  internal var center: UnitPoint
-  internal var startRadius: CGFloat
-  internal var endRadius: CGFloat
+public struct RadialGradient: @MainActor ShapeStyle, @MainActor View {
+  var gradient: Gradient
+  var center: UnitPoint
+  var startRadius: CGFloat
+  var endRadius: CGFloat
 
   public init(gradient: Gradient, center: UnitPoint, startRadius: CGFloat, endRadius: CGFloat) {
     self.gradient = gradient
@@ -59,8 +59,10 @@ public struct RadialGradient: ShapeStyle, View {
   public static func _apply(to type: inout _ShapeStyle_ShapeType) {}
 }
 
-public extension ShapeStyle where Self == RadialGradient {
-  static func radialGradient(
+extension ShapeStyle where Self == RadialGradient {
+
+  @MainActor
+  public static func radialGradient(
     _ gradient: Gradient,
     center: UnitPoint,
     startRadius: CGFloat,
@@ -72,7 +74,8 @@ public extension ShapeStyle where Self == RadialGradient {
     )
   }
 
-  static func radialGradient(
+  @MainActor
+  public static func radialGradient(
     colors: [Color],
     center: UnitPoint,
     startRadius: CGFloat,
@@ -84,7 +87,8 @@ public extension ShapeStyle where Self == RadialGradient {
     )
   }
 
-  static func radialGradient(
+  @MainActor
+  public static func radialGradient(
     stops: [Gradient.Stop],
     center: UnitPoint,
     startRadius: CGFloat,

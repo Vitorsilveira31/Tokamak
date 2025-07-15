@@ -14,7 +14,7 @@
 //
 //  Created by Carson Katri on 7/16/20.
 //
-
+@MainActor
 public protocol Scene {
   associatedtype Body: Scene
 
@@ -26,9 +26,11 @@ public protocol Scene {
   /// or in cases where the body would normally need to be type erased.
   ///
   /// You can `visit(_:)` either another `Scene` or a `View` with a `SceneVisitor`
+
   func _visitChildren<V: SceneVisitor>(_ visitor: V)
 
-  /// Create `SceneOutputs`, including any modifications to the environment, preferences, or a custom
+  /// Create `SceneOutputs`, including any modifications to the environment, preferences, or a
+  /// custom
   /// `LayoutComputer` from the `SceneInputs`.
   ///
   /// > At the moment, `SceneInputs`/`SceneOutputs` are identical to `ViewInputs`/`ViewOutputs`.
@@ -50,6 +52,7 @@ protocol GroupScene: ParentScene {}
 
 public protocol SceneDeferredToRenderer {
   var deferredBody: AnyView { get }
+  var title: Text? { get }
 }
 
 extension Never: Scene {}

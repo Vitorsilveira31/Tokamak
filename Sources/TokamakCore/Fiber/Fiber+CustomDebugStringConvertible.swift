@@ -15,11 +15,19 @@
 //  Created by Carson Katri on 5/30/22.
 //
 
-extension FiberReconciler.Fiber: CustomDebugStringConvertible {
+extension FiberReconciler.Fiber: @MainActor CustomDebugStringConvertible {
+
+  @MainActor
   public var debugDescription: String {
-    let memoryAddress = String(format: "%010p", unsafeBitCast(self, to: Int.self))
-    if case let .view(view, _) = content,
-       let text = view as? Text
+    //String(format: "%010p", unsafeBitCast(self, to: Int.self))
+
+    let address = UInt(bitPattern: ObjectIdentifier(self))
+    let hex = String(address, radix: 16, uppercase: false)
+    let padded = String(repeating: "0", count: max(10 - hex.count, 0)) + hex
+    let memoryAddress = "0x" + padded
+
+    if case .view(let view, _) = content,
+      let text = view as? Text
     {
       return "Text(\"\(text.storage.rawText)\") (\(memoryAddress))"
     }
@@ -28,19 +36,22 @@ extension FiberReconciler.Fiber: CustomDebugStringConvertible {
 
   private func flush(level: Int = 0) -> String {
     let spaces = String(repeating: " ", count: level)
-    let geometry = geometry ?? .init(
-      origin: .init(origin: .zero),
-      dimensions: .init(size: .zero, alignmentGuides: [:]),
-      proposal: .unspecified
-    )
+    let geometry =
+      geometry
+      ?? .init(
+        origin: .init(parent: .zero, origin: .zero),
+        dimensions: .init(size: .zero, alignmentGuides: [:]),
+        proposal: .unspecified
+      )
     return """
-    \(spaces)\(String(describing: typeInfo?.type ?? Any.self)
-      .split(separator: "<")[0])\(element != nil ? "(\(element!))" : "") {\(element != nil ?
+      \(spaces)\(
+      String(describing: typeInfo?.type ?? Any.self).split(separator: "<")[0])
+      \(element != nil ? "(\(element!))" : "") {\(element != nil ?
       "\n\(spaces)geometry: \(geometry)" :
       "")
-    \(child?.flush(level: level + 2) ?? "")
-    \(spaces)}
-    \(sibling?.flush(level: level) ?? "")
-    """
+      \(child?.flush(level: level + 2) ?? "")
+      \(spaces)}
+      \(sibling?.flush(level: level) ?? "")
+      """
   }
 }

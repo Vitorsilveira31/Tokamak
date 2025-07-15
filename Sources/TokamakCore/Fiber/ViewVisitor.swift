@@ -16,17 +16,24 @@
 //
 
 /// A type that can visit a `View`.
-public protocol ViewVisitor {
+@MainActor public protocol ViewVisitor {
   func visit<V: View>(_ view: V)
 }
 
-public extension View {
-  func _visitChildren<V: ViewVisitor>(_ visitor: V) {
+extension View {
+  public func _visitChildren<V: ViewVisitor>(_ visitor: V) {
+    print("🖼 View._visitChildren called for:", String(describing: type(of: self)))
+    print("🖼 View body type:", String(describing: type(of: body)))
+    print("🖼 View visitor type:", String(describing: type(of: visitor)))
+    if self is any _PrimitiveView {
+      print("🖼 This is a primitive view, skipping body visit")
+      return
+    }
     visitor.visit(body)
   }
 }
 
-public typealias ViewVisitorF<V: ViewVisitor> = (V) -> ()
+public typealias ViewVisitorF<V: ViewVisitor> = @MainActor (V) -> Void
 
 /// A type that creates a `Result` by visiting multiple `View`s.
 protocol ViewReducer {
@@ -37,12 +44,12 @@ protocol ViewReducer {
 
 extension ViewReducer {
   static func reduce<V: View>(into partialResult: inout Result, nextView: V) {
-    partialResult = Self.reduce(partialResult: partialResult, nextView: nextView)
+    partialResult = reduce(partialResult: partialResult, nextView: nextView)
   }
 
   static func reduce<V: View>(partialResult: Result, nextView: V) -> Result {
     var result = partialResult
-    Self.reduce(into: &result, nextView: nextView)
+    reduce(into: &result, nextView: nextView)
     return result
   }
 }
@@ -57,6 +64,7 @@ final class ReducerVisitor<R: ViewReducer>: ViewVisitor {
   }
 
   func visit<V>(_ view: V) where V: View {
+    print("🔵 ViewReducer.visit called for:", String(describing: type(of: view)))
     R.reduce(into: &result, nextView: view)
   }
 }

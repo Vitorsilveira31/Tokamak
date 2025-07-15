@@ -17,12 +17,27 @@
 
 import TokamakCore
 
-extension Link: _HTMLPrimitive {
+extension Link: @MainActor _HTMLPrimitive {
   @_spi(TokamakStaticHTML)
   public var renderedBody: AnyView {
     let proxy = _LinkProxy(self)
-    return AnyView(HTML("a", ["href": proxy.destination.absoluteString, "class": "_tokamak-link"]) {
-      proxy.label
-    })
+    return AnyView(
+      HTML("a", ["href": proxy.destination.absoluteString, "class": "_tokamak-link"]) {
+        proxy.label
+      })
+  }
+}
+
+@_spi(TokamakStaticHTML)
+extension Link: HTMLConvertible {
+  public var tag: String { "a" }
+  public func attributes(useDynamicLayout: Bool) -> [HTMLAttribute: String] {
+    ["href": _LinkProxy(self).destination.absoluteString, "class": "_tokamak-link"]
+  }
+
+  public func primitiveVisitor<V>(useDynamicLayout: Bool) -> ((V) -> Void)? where V: ViewVisitor {
+    {
+      $0.visit(_LinkProxy(self).label)
+    }
   }
 }

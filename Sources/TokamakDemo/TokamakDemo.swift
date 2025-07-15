@@ -22,9 +22,9 @@ func title<V>(_ view: V, title: String) -> AnyView where V: View {
     return AnyView(view.navigationTitle(title))
   } else {
     #if !os(macOS)
-    return AnyView(view.navigationBarTitle(title))
+      return AnyView(view.navigationBarTitle(title))
     #else
-    return AnyView(view)
+      return AnyView(view)
     #endif
   }
 }
@@ -49,163 +49,170 @@ struct NavItem: View {
       NavigationLink(id, destination: dest)
     } else {
       #if os(WASI)
-      Text(id)
-      #elseif os(macOS)
-      Text(id).opacity(0.5)
-      #elseif os(Linux)
-      HStack {
         Text(id)
-        Spacer()
-        Text("unavailable")
-      }
+      #elseif os(macOS)
+        Text(id).opacity(0.5)
+      #elseif os(Linux)
+        HStack {
+          Text(id)
+          Spacer()
+          Text("unavailable")
+        }
       #endif
     }
   }
 }
 
 struct TokamakDemoView: View {
-  var body: some View {
-    NavigationView { () -> AnyView in
-      let list = title(
-        List {
-          Image("logo-header.png", label: Text("Tokamak Demo"))
-            .frame(height: 50)
-            .padding(.bottom, 20)
-          Section(header: Text("Buttons")) {
-            NavItem(
-              "Counter",
-              destination:
+  var list: some View {
+    title(
+      List {
+        Image("logo-header.png", label: "Tokamak Demo")
+          .resizable()
+          .frame(height: 50)
+          .padding(.bottom, 100)
+        Section(header: Text("Buttons")) {
+          NavItem(
+            "Counter",
+            destination:
               Counter(count: Count(value: 5), limit: 15)
-                .padding()
-                .background(Color(red: 0.9, green: 0.9, blue: 0.9, opacity: 1.0))
-                .border(Color.red, width: 3)
-                .foregroundColor(.black)
-            )
-            NavItem("ButtonStyle", destination: ButtonStyleDemo())
-          }
-          Section(header: Text("Containers")) {
-            NavItem("ForEach", destination: ForEachDemo())
-            if #available(iOS 14.0, *) {
-              #if os(macOS)
+              .padding()
+              .background(Color(red: 0.9, green: 0.9, blue: 0.9, opacity: 1.0))
+              .border(Color.red, width: 3)
+              .foregroundColor(.black)
+          )
+          NavItem("ButtonStyle", destination: ButtonStyleDemo())
+        }
+        Section(header: Text("Containers")) {
+          NavItem("ForEach", destination: ForEachDemo())
+          if #available(iOS 14.0, *) {
+            #if os(macOS)
               NavItem("List", destination: ListDemo())
-              #else
+            #else
               NavItem("List", destination: ListDemo().listStyle(InsetGroupedListStyle()))
-              #endif
-            } else {
-              NavItem("List", destination: ListDemo())
-            }
-            if #available(iOS 14.0, *) {
-              NavItem("Sidebar", destination: SidebarListDemo().listStyle(SidebarListStyle()))
-            } else {
-              NavItem(unavailable: "Sidebar")
-            }
-            if #available(OSX 10.16, iOS 14.0, *) {
-              NavItem("OutlineGroup", destination: OutlineGroupDemo())
-            } else {
-              NavItem(unavailable: "OutlineGroup")
-            }
+            #endif
+          } else {
+            NavItem("List", destination: ListDemo())
           }
-          Section(header: Text("Drawing")) {
-            if #available(macOS 12.0, iOS 15.0, *) {
-              NavItem("Canvas", destination: CanvasDemo())
-            }
-            NavItem("Color", destination: ColorDemo())
-            NavItem("Path", destination: PathDemo())
-            if #available(macOS 12.0, iOS 15.0, *) {
-              NavItem("Shape Styles", destination: ShapeStyleDemo())
-            }
+          if #available(iOS 14.0, *) {
+            NavItem("Sidebar", destination: SidebarListDemo().listStyle(SidebarListStyle()))
+          } else {
+            NavItem(unavailable: "Sidebar")
           }
-          Section(header: Text("Layout")) {
-            NavItem("HStack/VStack", destination: StackDemo())
-            if #available(OSX 10.16, iOS 14.0, *) {
-              NavItem("Grid", destination: GridDemo())
-            } else {
-              NavItem(unavailable: "Grid")
-            }
-            NavItem("Spacer", destination: SpacerDemo())
-            NavItem("ZStack", destination: ZStack {
+          if #available(OSX 10.16, iOS 14.0, *) {
+            NavItem("OutlineGroup", destination: OutlineGroupDemo())
+          } else {
+            NavItem(unavailable: "OutlineGroup")
+          }
+        }
+        Section(header: Text("Drawing")) {
+          if #available(macOS 12.0, iOS 15.0, *) {
+            NavItem("Canvas", destination: CanvasDemo())
+          }
+          NavItem("Color", destination: ColorDemo())
+          //            NavItem("Path", destination: PathDemo())
+          if #available(macOS 12.0, iOS 15.0, *) {
+            NavItem("Shape Styles", destination: ShapeStyleDemo())
+          }
+        }
+        Section(header: Text("Layout")) {
+          NavItem("HStack/VStack", destination: StackDemo())
+          if #available(OSX 10.16, iOS 14.0, *) {
+            NavItem("Grid", destination: GridDemo())
+          } else {
+            NavItem(unavailable: "Grid")
+          }
+          NavItem("Spacer", destination: SpacerDemo())
+          NavItem(
+            "ZStack",
+            destination: ZStack {
               Text("I'm on bottom")
               Text("I'm forced to the top")
                 .zIndex(1)
               Text("I'm on top")
             }.padding(20))
-            NavItem("GeometryReader", destination: GeometryReaderDemo())
-          }
-          Section(header: Text("Modifiers")) {
-            NavItem("Shadow", destination: ShadowDemo())
-            #if os(WASI) && compiler(>=5.5) && (canImport(Concurrency) || canImport(_Concurrency))
+          NavItem("GeometryReader", destination: GeometryReaderDemo())
+        }
+        Section(header: Text("Modifiers")) {
+          NavItem("Shadow", destination: ShadowDemo())
+          #if os(WASI) && compiler(>=5.5) && (canImport(Concurrency) || canImport(_Concurrency))
+            NavItem("Receive Change", destination: ReceiveChangeDemo())
             NavItem("Task", destination: TaskDemo())
-            #endif
-          }
-          Section(header: Text("Selectors")) {
-            NavItem("DatePicker", destination: DatePickerDemo())
-            NavItem("Picker", destination: PickerDemo())
-            NavItem("Slider", destination: SliderDemo())
-            NavItem("Toggle", destination: ToggleDemo())
-          }
-          Section(header: Text("Text")) {
-            NavItem("Text", destination: TextDemo())
-            NavItem("TextField", destination: TextFieldDemo())
-            NavItem("TextEditor", destination: TextEditorDemo())
-          }
-          Section(header: Text("Misc")) {
-            NavItem("Animation", destination: AnimationDemo())
-            NavItem("Transitions", destination: TransitionDemo())
-            NavItem("ProgressView", destination: ProgressViewDemo())
-            NavItem("Environment", destination: EnvironmentDemo().font(.system(size: 8)))
-            if #available(macOS 11.0, iOS 14.0, *) {
-              NavItem("Preferences", destination: PreferenceKeyDemo())
-            }
-            if #available(OSX 11.0, iOS 14.0, *) {
-              NavItem("AppStorage", destination: AppStorageDemo())
-            } else {
-              NavItem(unavailable: "AppStorage")
-            }
-            if #available(OSX 11.0, iOS 14.0, *) {
-              NavItem("Redaction", destination: RedactionDemo())
-            } else {
-              NavItem(unavailable: "Redaction")
-            }
-          }
-          #if os(WASI)
-          Section(header: Text("TokamakDOM")) {
-            NavItem("DOM reference", destination: DOMRefDemo())
-            NavItem("URL hash changes", destination: URLHashDemo())
-          }
           #endif
         }
-        .frame(minHeight: 300),
-        title: "Demos"
-      )
-      if #available(iOS 14.0, *) {
-        return AnyView(
-          list
-            .listStyle(SidebarListStyle())
-            .navigationTitle("Tokamak")
-            .toolbar {
-              ToolbarItem(placement: .cancellationAction) {
-                Button("Cancellation Action") {}
-              }
-              ToolbarItem(placement: .confirmationAction) {
-                Button("Confirmation Action") {}
-              }
-              ToolbarItem(placement: .destructiveAction) {
-                Button("Destructive Action") {}
-              }
-              ToolbarItem(placement: .navigation) {
-                Text("Some nav-text")
-                  .italic()
-              }
-              ToolbarItem(placement: .status) {
-                Text("Status: Live")
-                  .bold()
-                  .foregroundColor(.green)
-              }
-            }
-        )
-      } else {
-        return AnyView(list)
+        Section(header: Text("Selectors")) {
+          NavItem("DatePicker", destination: DatePickerDemo())
+          NavItem("Picker", destination: PickerDemo())
+          NavItem("Slider", destination: SliderDemo())
+          NavItem("Toggle", destination: ToggleDemo())
+        }
+        Section(header: Text("Text")) {
+          NavItem("Text", destination: TextDemo())
+          NavItem("TextField", destination: TextFieldDemo())
+          NavItem("TextEditor", destination: TextEditorDemo())
+        }
+        Section(header: Text("Text")) {
+          NavItem("Gestures", destination: GesturesDemo())
+          NavItem("Gesture & CoordinateSpace", destination: GestureCoordinateSpaceDemo())
+        }
+        Section(header: Text("Misc")) {
+          NavItem("Animation", destination: AnimationDemo())
+          NavItem("Transitions", destination: TransitionDemo())
+          NavItem("ProgressView", destination: ProgressViewDemo())
+          NavItem("Environment", destination: EnvironmentDemo().font(.system(size: 8)))
+          if #available(macOS 11.0, iOS 14.0, *) {
+            NavItem("Preferences", destination: PreferenceKeyDemo())
+          }
+          if #available(OSX 11.0, iOS 14.0, *) {
+            NavItem("AppStorage", destination: AppStorageDemo())
+          } else {
+            NavItem(unavailable: "AppStorage")
+          }
+          if #available(OSX 11.0, iOS 14.0, *) {
+            NavItem("Redaction", destination: RedactionDemo())
+          } else {
+            NavItem(unavailable: "Redaction")
+          }
+        }
+        // #if os(WASI)
+        //   Section(header: Text("TokamakDOM")) {
+        //     NavItem("DOM reference", destination: DOMRefDemo())
+        //     NavItem("URL hash changes", destination: URLHashDemo())
+        //   }
+        // #endif
       }
+      .frame(minHeight: 300),
+      title: "Demos"
+    )
+  }
+
+  var body: some View {
+    NavigationView {
+      AnyView(
+        list
+          .listStyle(SidebarListStyle())
+          .navigationTitle("Tokamak")
+          .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+              Button("Cancellation Action") {}
+            }
+            ToolbarItem(placement: .confirmationAction) {
+              Button("Confirmation Action") {}
+            }
+            ToolbarItem(placement: .destructiveAction) {
+              Button("Destructive Action") {}
+            }
+            ToolbarItem(placement: .navigation) {
+              Text("Some nav-text")
+                .italic()
+            }
+            ToolbarItem(placement: .status) {
+              Text("Status: Live")
+                .bold()
+                .foregroundColor(.green)
+            }
+          }
+      )
     }
     .environmentObject(TestEnvironment())
   }
